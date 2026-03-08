@@ -19,18 +19,24 @@ var tools = []ToolDefinition{
 		Name:        "planning.status",
 		Description: "Query project status and filters",
 		InputSchema: objectSchema(map[string]interface{}{
-			"project":  intSchema("Project number"),
-			"owner":    stringSchema("Project owner"),
-			"stale":    stringSchema("Stale duration (e.g. 7d)"),
-			"assignee": stringSchema("Assignee filter"),
+			"project":   intSchema("Project number"),
+			"owner":     stringSchema("Project owner"),
+			"stale":     stringSchema("Stale duration (e.g. 7d)"),
+			"assignee":  stringSchema("Assignee filter"),
+			"board":     boolSchema("Show kanban board view"),
+			"swimlanes": boolSchema("Show assignee swimlanes"),
+			"exclude":   arraySchema("Statuses to exclude", "string"),
 		}),
 		Command: []string{"planning", "status"},
 		Build: func(args map[string]interface{}) ([]string, error) {
 			return buildFlags([]string{"planning", "status"}, args, flagSpec{
-				"project":  flagInt("--project"),
-				"owner":    flagString("--owner"),
-				"stale":    flagString("--stale"),
-				"assignee": flagString("--assignee"),
+				"project":   flagInt("--project"),
+				"owner":     flagString("--owner"),
+				"stale":     flagString("--stale"),
+				"assignee":  flagString("--assignee"),
+				"board":     flagBool("--board"),
+				"swimlanes": flagBool("--swimlanes"),
+				"exclude":   flagRepeat("--exclude"),
 			})
 		},
 	},
@@ -177,18 +183,20 @@ var tools = []ToolDefinition{
 		Name:        "planning.agentContext",
 		Description: "Summarize project context for an agent",
 		InputSchema: objectSchema(map[string]interface{}{
-			"project": intSchema("Project number"),
-			"owner":   stringSchema("Project owner"),
-			"issue":   stringSchema("Issue URL or number"),
-			"repo":    stringSchema("Repository (owner/repo)"),
+			"project":    intSchema("Project number"),
+			"owner":      stringSchema("Project owner"),
+			"issue":      stringSchema("Issue URL or number"),
+			"repo":       stringSchema("Repository (owner/repo)"),
+			"newSession": boolSchema("Start a new session"),
 		}),
 		Command: []string{"planning", "agent-context"},
 		Build: func(args map[string]interface{}) ([]string, error) {
 			return buildFlags([]string{"planning", "agent-context"}, args, flagSpec{
-				"project": flagInt("--project"),
-				"owner":   flagString("--owner"),
-				"issue":   flagString("--issue"),
-				"repo":    flagString("--repo"),
+				"project":    flagInt("--project"),
+				"owner":      flagString("--owner"),
+				"issue":      flagString("--issue"),
+				"repo":       flagString("--repo"),
+				"newSession": flagBool("--new-session"),
 			})
 		},
 	},
@@ -328,6 +336,47 @@ var tools = []ToolDefinition{
 				"decision":  flagRepeat("--decision"),
 				"uncertain": flagRepeat("--uncertain"),
 				"session":   flagString("--session"),
+			})
+		},
+	},
+	{
+		Name:        "planning.log",
+		Description: "Log progress on current focus issue",
+		InputSchema: objectSchema(map[string]interface{}{
+			"message": stringSchema("Log message"),
+			"kind": map[string]interface{}{
+				"type":        "string",
+				"description": "Log entry kind",
+				"enum":        []string{"progress", "decision", "blocker", "hypothesis", "tried", "result"},
+			},
+		}, "message"),
+		Command: []string{"planning", "log"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			message := firstString(args, "message")
+			if message == "" {
+				return nil, fmt.Errorf("message is required")
+			}
+			cmdArgs := []string{"planning", "log"}
+			kind := firstString(args, "kind")
+			if kind != "" && kind != "progress" {
+				cmdArgs = append(cmdArgs, "--"+kind)
+			}
+			cmdArgs = append(cmdArgs, message)
+			return cmdArgs, nil
+		},
+	},
+	{
+		Name:        "planning.logs",
+		Description: "View progress log timeline",
+		InputSchema: objectSchema(map[string]interface{}{
+			"all":   boolSchema("Show all log entries"),
+			"since": stringSchema("Show entries since duration (e.g. 1h, 30m)"),
+		}),
+		Command: []string{"planning", "logs"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "logs"}, args, flagSpec{
+				"all":   flagBool("--all"),
+				"since": flagString("--since"),
 			})
 		},
 	},
