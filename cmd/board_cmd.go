@@ -56,6 +56,13 @@ func runBoard(cmd *cobra.Command, args []string) error {
 	if owner == "" || project == 0 {
 		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
+
+	if boardOpts.Open {
+		url := projectURL(owner, project)
+		fmt.Println(url)
+		return openURL(url)
+	}
+
 	staleDuration, err := parseDuration(boardOpts.Stale)
 	if err != nil {
 		return fmt.Errorf("invalid stale duration: %w", err)
@@ -84,10 +91,6 @@ func runBoard(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("📊 Project: %s (#%d)\n", projectData.Title, project)
 	fmt.Printf("   %s\n\n", projectURL(owner, project))
-
-	if boardOpts.Open {
-		_ = openURL(projectURL(owner, project))
-	}
 
 	if boardOpts.Swimlanes {
 		printSwimlaneBoardView(filtered)
