@@ -97,16 +97,47 @@ Clear focus and optionally comment on the issue.
 gh planning unfocus --comment "Wrapped this up"
 ```
 
+### `gh planning standup`
+
+Generate a standup report (optionally for your team).
+
+```bash
+gh planning standup --since 24h
+gh planning standup --team
+```
+
+### `gh planning catch-up`
+
+Summarize updates since your last session.
+
+```bash
+gh planning catch-up
+gh planning catch-up --since friday
+```
+
+### `gh planning breakdown <issue>`
+
+Split an issue into sub-issues with GitHub Models.
+
+```bash
+gh planning breakdown https://github.com/maxbeizer/app/issues/42 --dry-run
+gh planning breakdown 42 --repo maxbeizer/app
+```
+
+### `gh planning handoff <issue>`
+
+Post a structured session handoff to an issue.
+
+```bash
+gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout flow"
+```
+
 ## Global Flags
 
 All commands accept:
 
 - `--json` for JSON output
 - `--jq <expr>` to filter JSON output (requires `--json`)
-
-## Phase 2+ (Coming Soon)
-
-Standup, catch-up, breakdown, team, and agent workflows are on the roadmap.
 
 ## Development
 

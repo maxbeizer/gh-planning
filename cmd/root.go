@@ -38,6 +38,10 @@ func init() {
 	rootCmd.AddCommand(trackCmd)
 	rootCmd.AddCommand(focusCmd)
 	rootCmd.AddCommand(unfocusCmd)
+	rootCmd.AddCommand(standupCmd)
+	rootCmd.AddCommand(catchupCmd)
+	rootCmd.AddCommand(breakdownCmd)
+	rootCmd.AddCommand(handoffCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
