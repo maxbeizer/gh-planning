@@ -58,6 +58,9 @@ func init() {
 	rootCmd.AddCommand(sprintCmd)
 	rootCmd.AddCommand(roadmapCmd)
 	rootCmd.AddCommand(prioritizeCmd)
+	rootCmd.AddCommand(blockedCmd)
+	rootCmd.AddCommand(unblockCmd)
+	rootCmd.AddCommand(criticalPathCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
