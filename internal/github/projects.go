@@ -33,7 +33,7 @@ type Project struct {
 	Items map[string][]ProjectItem `json:"items"`
 }
 
-const projectItemsQuery = `query($owner: String!, $number: Int!, $cursor: String) {
+const projectItemsQueryUser = `query($owner: String!, $number: Int!, $cursor: String) {
   user(login: $owner) {
     projectV2(number: $number) {
       title
@@ -83,53 +83,115 @@ const projectItemsQuery = `query($owner: String!, $number: Int!, $cursor: String
   }
 }`
 
+const projectItemsQueryOrg = `query($owner: String!, $number: Int!, $cursor: String) {
+  organization(login: $owner) {
+    projectV2(number: $number) {
+      title
+      items(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          content {
+            __typename
+            ... on Issue {
+              title
+              number
+              url
+              state
+              createdAt
+              updatedAt
+              assignees(first: 5) { nodes { login } }
+              labels(first: 10) { nodes { name } }
+              repository { nameWithOwner }
+            }
+            ... on PullRequest {
+              title
+              number
+              url
+              state
+              createdAt
+              updatedAt
+              assignees(first: 5) { nodes { login } }
+              labels(first: 10) { nodes { name } }
+              repository { nameWithOwner }
+            }
+          }
+          fieldValues(first: 20) {
+            nodes {
+              ... on ProjectV2ItemFieldSingleSelectValue {
+                name
+                field { ... on ProjectV2SingleSelectField { name } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`
+
+type projectV2Items struct {
+	Title string `json:"title"`
+	Items struct {
+		PageInfo struct {
+			HasNextPage bool   `json:"hasNextPage"`
+			EndCursor   string `json:"endCursor"`
+		} `json:"pageInfo"`
+		Nodes []struct {
+			ID      string `json:"id"`
+			Content *struct {
+				Typename string    `json:"__typename"`
+				Title    string    `json:"title"`
+				Number   int       `json:"number"`
+				URL      string    `json:"url"`
+				State    string    `json:"state"`
+				CreatedAt time.Time `json:"createdAt"`
+				UpdatedAt time.Time `json:"updatedAt"`
+				Assignees struct {
+					Nodes []struct {
+						Login string `json:"login"`
+					} `json:"nodes"`
+				} `json:"assignees"`
+				Labels struct {
+					Nodes []struct {
+						Name string `json:"name"`
+					} `json:"nodes"`
+				} `json:"labels"`
+				Repository struct {
+					NameWithOwner string `json:"nameWithOwner"`
+				} `json:"repository"`
+			} `json:"content"`
+			FieldValues struct {
+				Nodes []struct {
+					Name  string `json:"name"`
+					Field struct {
+						Name string `json:"name"`
+					} `json:"field"`
+				} `json:"nodes"`
+			} `json:"fieldValues"`
+		} `json:"nodes"`
+	} `json:"items"`
+}
+
 type projectItemsResponse struct {
 	Data struct {
 		User struct {
-			ProjectV2 *struct {
-				Title string `json:"title"`
-				Items struct {
-					PageInfo struct {
-						HasNextPage bool   `json:"hasNextPage"`
-						EndCursor   string `json:"endCursor"`
-					} `json:"pageInfo"`
-					Nodes []struct {
-						ID      string `json:"id"`
-						Content *struct {
-							Typename string `json:"__typename"`
-							Title     string    `json:"title"`
-							Number    int       `json:"number"`
-							URL       string    `json:"url"`
-							State     string    `json:"state"`
-							CreatedAt time.Time `json:"createdAt"`
-							UpdatedAt time.Time `json:"updatedAt"`
-							Assignees struct {
-								Nodes []struct {
-									Login string `json:"login"`
-								} `json:"nodes"`
-							} `json:"assignees"`
-							Labels struct {
-								Nodes []struct {
-									Name string `json:"name"`
-								} `json:"nodes"`
-							} `json:"labels"`
-							Repository struct {
-								NameWithOwner string `json:"nameWithOwner"`
-							} `json:"repository"`
-						} `json:"content"`
-						FieldValues struct {
-							Nodes []struct {
-								Name  string `json:"name"`
-								Field struct {
-									Name string `json:"name"`
-								} `json:"field"`
-							} `json:"nodes"`
-						} `json:"fieldValues"`
-					} `json:"nodes"`
-				} `json:"items"`
-			} `json:"projectV2"`
+			ProjectV2 *projectV2Items `json:"projectV2"`
 		} `json:"user"`
+		Organization struct {
+			ProjectV2 *projectV2Items `json:"projectV2"`
+		} `json:"organization"`
 	} `json:"data"`
+}
+
+func (r *projectItemsResponse) projectV2() *projectV2Items {
+	if r.Data.User.ProjectV2 != nil {
+		return r.Data.User.ProjectV2
+	}
+	return r.Data.Organization.ProjectV2
 }
 
 const projectCacheTTL = 2 * time.Minute
@@ -191,6 +253,9 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 	project := &Project{Items: map[string][]ProjectItem{}}
 	var cursor string
 	page := 0
+	// Try user query first; if the project isn't found, retry with org query.
+	query := projectItemsQueryUser
+	useOrg := false
 
 	for {
 		page++
@@ -201,21 +266,38 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 		if cursor != "" {
 			vars["cursor"] = cursor
 		}
-		payload, err := GraphQL(ctx, projectItemsQuery, vars)
+		payload, err := GraphQL(ctx, query, vars)
 		if err != nil {
+			if !useOrg {
+				// User query failed, try org query from scratch
+				useOrg = true
+				query = projectItemsQueryOrg
+				cursor = ""
+				page = 0
+				continue
+			}
 			return nil, err
 		}
 		var resp projectItemsResponse
 		if err := json.Unmarshal(payload, &resp); err != nil {
 			return nil, err
 		}
-		if resp.Data.User.ProjectV2 == nil {
+		pv2 := resp.projectV2()
+		if pv2 == nil {
+			if !useOrg {
+				// User query returned nil project, try org query
+				useOrg = true
+				query = projectItemsQueryOrg
+				cursor = ""
+				page = 0
+				continue
+			}
 			return nil, errors.New("project not found")
 		}
 		if project.Title == "" {
-			project.Title = resp.Data.User.ProjectV2.Title
+			project.Title = pv2.Title
 		}
-		for _, node := range resp.Data.User.ProjectV2.Items.Nodes {
+		for _, node := range pv2.Items.Nodes {
 			if node.Content == nil {
 				continue
 			}
@@ -251,17 +333,17 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 			project.Items[status] = append(project.Items[status], item)
 		}
 
-		if !resp.Data.User.ProjectV2.Items.PageInfo.HasNextPage {
+		if !pv2.Items.PageInfo.HasNextPage {
 			break
 		}
-		cursor = resp.Data.User.ProjectV2.Items.PageInfo.EndCursor
+		cursor = pv2.Items.PageInfo.EndCursor
 	}
 
 	fmt.Fprintf(os.Stderr, " done (%d items, cached for %s)\n", totalItems(project), projectCacheTTL)
 	saveProjectCache(owner, number, project)
 	return project, nil
 }
-const projectInfoQuery = `query($owner: String!, $number: Int!) {
+const projectInfoQueryUser = `query($owner: String!, $number: Int!) {
   user(login: $owner) {
     projectV2(number: $number) {
       id
@@ -279,41 +361,91 @@ const projectInfoQuery = `query($owner: String!, $number: Int!) {
   }
 }`
 
+const projectInfoQueryOrg = `query($owner: String!, $number: Int!) {
+  organization(login: $owner) {
+    projectV2(number: $number) {
+      id
+      title
+      fields(first: 50) {
+        nodes {
+          ... on ProjectV2SingleSelectField {
+            id
+            name
+            options { id name }
+          }
+        }
+      }
+    }
+  }
+}`
+
+type projectV2Info struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Fields struct {
+		Nodes []struct {
+			ID      string `json:"id"`
+			Name    string `json:"name"`
+			Options []struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			} `json:"options"`
+		} `json:"nodes"`
+	} `json:"fields"`
+}
+
 type projectInfoResponse struct {
 	Data struct {
 		User struct {
-			ProjectV2 *struct {
-				ID     string `json:"id"`
-				Title  string `json:"title"`
-				Fields struct {
-					Nodes []struct {
-						ID      string `json:"id"`
-						Name    string `json:"name"`
-						Options []struct {
-							ID   string `json:"id"`
-							Name string `json:"name"`
-						} `json:"options"`
-					} `json:"nodes"`
-				} `json:"fields"`
-			} `json:"projectV2"`
+			ProjectV2 *projectV2Info `json:"projectV2"`
 		} `json:"user"`
+		Organization struct {
+			ProjectV2 *projectV2Info `json:"projectV2"`
+		} `json:"organization"`
 	} `json:"data"`
 }
 
+func (r *projectInfoResponse) projectV2() *projectV2Info {
+	if r.Data.User.ProjectV2 != nil {
+		return r.Data.User.ProjectV2
+	}
+	return r.Data.Organization.ProjectV2
+}
+
 func GetProjectInfo(ctx context.Context, owner string, number int) (projectID string, title string, statusFieldID string, statusOptions map[string]string, err error) {
-	payload, err := GraphQL(ctx, projectInfoQuery, map[string]interface{}{"owner": owner, "number": number})
+	vars := map[string]interface{}{"owner": owner, "number": number}
+
+	// Try user query first
+	payload, err := GraphQL(ctx, projectInfoQueryUser, vars)
 	if err != nil {
-		return "", "", "", nil, err
+		// User query failed, try org query
+		payload, err = GraphQL(ctx, projectInfoQueryOrg, vars)
+		if err != nil {
+			return "", "", "", nil, err
+		}
 	}
 	var resp projectInfoResponse
 	if err := json.Unmarshal(payload, &resp); err != nil {
 		return "", "", "", nil, err
 	}
-	if resp.Data.User.ProjectV2 == nil {
-		return "", "", "", nil, errors.New("project not found")
+	pv2 := resp.projectV2()
+	if pv2 == nil {
+		// User query returned nil, try org query
+		payload, err = GraphQL(ctx, projectInfoQueryOrg, vars)
+		if err != nil {
+			return "", "", "", nil, err
+		}
+		var orgResp projectInfoResponse
+		if err := json.Unmarshal(payload, &orgResp); err != nil {
+			return "", "", "", nil, err
+		}
+		pv2 = orgResp.projectV2()
+		if pv2 == nil {
+			return "", "", "", nil, errors.New("project not found")
+		}
 	}
 	statusOptions = map[string]string{}
-	for _, field := range resp.Data.User.ProjectV2.Fields.Nodes {
+	for _, field := range pv2.Fields.Nodes {
 		if strings.EqualFold(field.Name, "Status") {
 			statusFieldID = field.ID
 			for _, option := range field.Options {
@@ -322,7 +454,7 @@ func GetProjectInfo(ctx context.Context, owner string, number int) (projectID st
 			break
 		}
 	}
-	return resp.Data.User.ProjectV2.ID, resp.Data.User.ProjectV2.Title, statusFieldID, statusOptions, nil
+	return pv2.ID, pv2.Title, statusFieldID, statusOptions, nil
 }
 
 const addItemMutation = `mutation($projectId: ID!, $contentId: ID!) {
