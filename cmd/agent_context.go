@@ -214,10 +214,15 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		decisions = decisions[:5]
 	}
 
-	// Fetch review requests (depends on currentUser from parallel call above)
+	// Fetch review requests scoped to repos in this project
 	reviewRequests := []agentContextReview{}
 	if currentUser != "" {
+		repos := uniqueRepos(projectData)
+		repoQuery := buildRepoQuery(repos)
 		query := fmt.Sprintf("is:pr state:open review-requested:%s", currentUser)
+		if repoQuery != "" {
+			query = repoQuery + " " + query
+		}
 		results, err := github.SearchIssues(cmd.Context(), query)
 		if err != nil {
 			return err
