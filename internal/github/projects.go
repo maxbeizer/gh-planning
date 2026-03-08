@@ -499,6 +499,49 @@ func UpdateItemStatus(ctx context.Context, projectID string, itemID string, fiel
 	return nil
 }
 
+// GetProjectField looks up a single-select field by name and returns its ID and options.
+func GetProjectField(ctx context.Context, owner string, number int, fieldName string) (fieldID string, options map[string]string, err error) {
+	vars := map[string]interface{}{"owner": owner, "number": number}
+
+	payload, err := GraphQL(ctx, projectInfoQueryUser, vars)
+	if err != nil {
+		payload, err = GraphQL(ctx, projectInfoQueryOrg, vars)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+	var resp projectInfoResponse
+	if err := json.Unmarshal(payload, &resp); err != nil {
+		return "", nil, err
+	}
+	pv2 := resp.projectV2()
+	if pv2 == nil {
+		payload, err = GraphQL(ctx, projectInfoQueryOrg, vars)
+		if err != nil {
+			return "", nil, err
+		}
+		var orgResp projectInfoResponse
+		if err := json.Unmarshal(payload, &orgResp); err != nil {
+			return "", nil, err
+		}
+		pv2 = orgResp.projectV2()
+		if pv2 == nil {
+			return "", nil, nil
+		}
+	}
+	options = map[string]string{}
+	for _, field := range pv2.Fields.Nodes {
+		if strings.EqualFold(field.Name, fieldName) {
+			fieldID = field.ID
+			for _, option := range field.Options {
+				options[option.Name] = option.ID
+			}
+			return fieldID, options, nil
+		}
+	}
+	return "", nil, nil
+}
+
 func VerifyProject(ctx context.Context, owner string, number int) (string, error) {
 	projectID, title, _, _, err := GetProjectInfo(ctx, owner, number)
 	if err != nil {
