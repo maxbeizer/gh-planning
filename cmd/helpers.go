@@ -75,3 +75,12 @@ func isTerminal() bool {
 	}
 	return fi.Mode()&os.ModeCharDevice != 0
 }
+
+// issueRef returns a possibly-hyperlinked "#N" string.
+func issueRef(number int, url string) string {
+ref := fmt.Sprintf("#%d", number)
+if url != "" {
+return hyperlink(url, ref)
+}
+return ref
+}

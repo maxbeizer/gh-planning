@@ -256,7 +256,7 @@ func printStandupReport(report standupData, since time.Duration) {
 			if strings.Contains(strings.ToLower(item.URL), "/pull/") || strings.Contains(strings.ToLower(item.URL), "pull") {
 				label = "Merged PR"
 			}
-			fmt.Printf("  • %s #%d: %s (%s)\n", label, item.Number, item.Title, item.Repo)
+			fmt.Printf("  • %s %s: %s (%s)\n", label, issueRef(item.Number, item.URL), item.Title, item.Repo)
 		}
 	}
 	fmt.Println()
@@ -266,7 +266,7 @@ func printStandupReport(report standupData, since time.Duration) {
 		fmt.Println("  • None")
 	} else {
 		for _, item := range report.InProgress {
-			fmt.Printf("  • #%d: %s (%s) — %s\n", item.Number, item.Title, item.Repo, activeLabel(item.UpdatedAt))
+			fmt.Printf("  • %s: %s (%s) — %s\n", issueRef(item.Number, item.URL), item.Title, item.Repo, activeLabel(item.UpdatedAt))
 		}
 	}
 	fmt.Println()
@@ -276,7 +276,7 @@ func printStandupReport(report standupData, since time.Duration) {
 		fmt.Println("  • None")
 	} else {
 		for _, item := range report.Blocked {
-			fmt.Printf("  • #%d: %s (%s) — %s\n", item.Number, item.Title, item.Repo, activeLabel(item.UpdatedAt))
+			fmt.Printf("  • %s: %s (%s) — %s\n", issueRef(item.Number, item.URL), item.Title, item.Repo, activeLabel(item.UpdatedAt))
 		}
 	}
 	fmt.Println()
@@ -286,7 +286,7 @@ func printStandupReport(report standupData, since time.Duration) {
 		fmt.Println("  • None")
 	} else {
 		for _, item := range report.InReview {
-			fmt.Printf("  • PR #%d: %s (%s) — awaiting review\n", item.Number, item.Title, item.Repo)
+			fmt.Printf("  • PR %s: %s (%s) — awaiting review\n", issueRef(item.Number, item.URL), item.Title, item.Repo)
 		}
 	}
 }

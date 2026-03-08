@@ -302,7 +302,13 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		if title == "" {
 			title = "(title unavailable)"
 		}
-		fmt.Printf("📍 Focus: #%d \"%s\" (%s)\n", focusNumber, title, focusRepo)
+		focusRef := issueRef(focusNumber, "")
+		if focusIssue.Title != "" {
+			// Build URL from repo + number
+			focusURL := fmt.Sprintf("https://github.com/%s/issues/%d", focusRepo, focusNumber)
+			focusRef = issueRef(focusNumber, focusURL)
+		}
+		fmt.Printf("📍 Focus: %s \"%s\" (%s)\n", focusRef, title, focusRepo)
 		if len(focusHandoffs) > 0 {
 			fmt.Printf("   Last handoff (%s): %s\n", humanizeDuration(time.Since(focusHandoffs[0].Time)), focusIssue.LastHandoff)
 		}
@@ -311,7 +317,7 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	}
 
 	if nextUp != nil {
-		fmt.Printf("📋 Next up: #%d \"%s\" (%s)\n", nextUp.Number, nextUp.Title, nextUp.Repository)
+		fmt.Printf("📋 Next up: %s \"%s\" (%s)\n", issueRef(nextUp.Number, nextUp.URL), nextUp.Title, nextUp.Repository)
 	}
 
 	fmt.Println()
@@ -354,7 +360,7 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		fmt.Println("   • none")
 	} else {
 		for _, review := range reviewRequests {
-			fmt.Printf("   • PR #%d: %s (@%s)\n", review.Number, review.Title, review.Author)
+			fmt.Printf("   • PR %s: %s (@%s)\n", issueRef(review.Number, review.URL), review.Title, review.Author)
 		}
 	}
 
@@ -364,7 +370,7 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		fmt.Println("   • none")
 	} else {
 		for _, blocked := range blockedItems {
-			fmt.Printf("   • #%d: %s\n", blocked.Number, blocked.Title)
+			fmt.Printf("   • %s: %s\n", issueRef(blocked.Number, blocked.URL), blocked.Title)
 		}
 	}
 

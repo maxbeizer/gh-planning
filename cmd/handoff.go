@@ -81,7 +81,8 @@ func runHandoff(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("Posted handoff to %s#%d\n", repo, number)
+	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
+	fmt.Printf("Posted handoff to %s%s\n", repo, issueRef(number, issueURL))
 	return nil
 }
 

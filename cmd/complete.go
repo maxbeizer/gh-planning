@@ -134,7 +134,8 @@ func runComplete(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("Completed %s#%d (moved to %s)\n", repo, number, statusLabel)
+	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
+	fmt.Printf("Completed %s%s (moved to %s)\n", repo, issueRef(number, issueURL), statusLabel)
 	return nil
 }
 

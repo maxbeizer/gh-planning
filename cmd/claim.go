@@ -107,6 +107,7 @@ func runClaim(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("Claimed %s#%d (session %s)\n", repo, number, sessionID)
+	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
+	fmt.Printf("Claimed %s%s (session %s)\n", repo, issueRef(number, issueURL), sessionID)
 	return nil
 }

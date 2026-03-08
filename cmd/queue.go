@@ -19,6 +19,7 @@ type queueItem struct {
 	Number    int       `json:"number"`
 	Title     string    `json:"title"`
 	Repo      string    `json:"repo"`
+	URL       string    `json:"url"`
 	Priority  string    `json:"priority"`
 	Labels    []string  `json:"labels"`
 	Status    string    `json:"status"`
@@ -98,6 +99,7 @@ func runQueue(cmd *cobra.Command, args []string) error {
 				Number:    item.Number,
 				Title:     item.Title,
 				Repo:      item.Repository,
+				URL:       item.URL,
 				Priority:  priority,
 				Labels:    item.Labels,
 				Status:    item.Status,
@@ -145,7 +147,7 @@ func runQueue(cmd *cobra.Command, args []string) error {
 		} else if len(item.Labels) > 0 {
 			label = item.Labels[0]
 		}
-		fmt.Fprintf(w, "  %d.\t#%d\t%s\t%s\t%s\t%s\n", i+1, item.Number, truncate(item.Title, 28), item.Repo, priority, label)
+		fmt.Fprintf(w, "  %d.\t%s\t%s\t%s\t%s\t%s\n", i+1, issueRef(item.Number, item.URL), truncate(item.Title, 28), item.Repo, priority, label)
 	}
 	w.Flush()
 	fmt.Println()

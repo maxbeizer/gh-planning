@@ -202,7 +202,7 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("%s (%d)\n", section.Title, len(section.Items))
 		for _, item := range section.Items {
-			line := fmt.Sprintf("  • #%d: %s (%s)", item.Number, item.Title, item.Repo)
+			line := fmt.Sprintf("  • %s: %s (%s)", issueRef(item.Number, item.URL), item.Title, item.Repo)
 			if item.Author != "" {
 				line = fmt.Sprintf("%s — opened by @%s", line, item.Author)
 			}

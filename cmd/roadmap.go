@@ -288,7 +288,7 @@ func printTimelineBucket(bucket timelineBucket, isFirst bool) {
 func formatTimelineItem(item github.ProjectItem) string {
 	var parts []string
 	if item.Number > 0 {
-		parts = append(parts, fmt.Sprintf("#%d", item.Number))
+		parts = append(parts, issueRef(item.Number, item.URL))
 	}
 	parts = append(parts, item.Title)
 
