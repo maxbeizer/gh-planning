@@ -2,8 +2,12 @@ package github
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -29,11 +33,15 @@ type Project struct {
 	Items map[string][]ProjectItem `json:"items"`
 }
 
-const projectItemsQuery = `query($owner: String!, $number: Int!) {
+const projectItemsQuery = `query($owner: String!, $number: Int!, $cursor: String) {
   user(login: $owner) {
     projectV2(number: $number) {
       title
-      items(first: 100) {
+      items(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           content {
@@ -81,6 +89,10 @@ type projectItemsResponse struct {
 			ProjectV2 *struct {
 				Title string `json:"title"`
 				Items struct {
+					PageInfo struct {
+						HasNextPage bool   `json:"hasNextPage"`
+						EndCursor   string `json:"endCursor"`
+					} `json:"pageInfo"`
 					Nodes []struct {
 						ID      string `json:"id"`
 						Content *struct {
@@ -120,57 +132,135 @@ type projectItemsResponse struct {
 	} `json:"data"`
 }
 
-func GetProject(ctx context.Context, owner string, number int) (*Project, error) {
-	payload, err := GraphQL(ctx, projectItemsQuery, map[string]interface{}{"owner": owner, "number": number})
-	if err != nil {
-		return nil, err
-	}
-	var resp projectItemsResponse
-	if err := json.Unmarshal(payload, &resp); err != nil {
-		return nil, err
-	}
-	if resp.Data.User.ProjectV2 == nil {
-		return nil, errors.New("project not found")
-	}
-	project := &Project{Title: resp.Data.User.ProjectV2.Title, Items: map[string][]ProjectItem{}}
-	for _, node := range resp.Data.User.ProjectV2.Items.Nodes {
-		if node.Content == nil {
-			continue
-		}
-		status := "No Status"
-		fields := map[string]string{}
-		for _, field := range node.FieldValues.Nodes {
-			if field.Field.Name != "" && field.Name != "" {
-				fields[field.Field.Name] = field.Name
-			}
-			if strings.EqualFold(field.Field.Name, "Status") && field.Name != "" {
-				status = field.Name
-			}
-		}
-		item := ProjectItem{
-			ID:          node.ID,
-			Title:       node.Content.Title,
-			Number:      node.Content.Number,
-			URL:         node.Content.URL,
-			State:       node.Content.State,
-			CreatedAt:   node.Content.CreatedAt,
-			UpdatedAt:   node.Content.UpdatedAt,
-			Repository:  node.Content.Repository.NameWithOwner,
-			Status:      status,
-			ContentType: node.Content.Typename,
-			Fields:      fields,
-		}
-		for _, assignee := range node.Content.Assignees.Nodes {
-			item.Assignees = append(item.Assignees, assignee.Login)
-		}
-		for _, label := range node.Content.Labels.Nodes {
-			item.Labels = append(item.Labels, label.Name)
-		}
-		project.Items[status] = append(project.Items[status], item)
-	}
-	return project, nil
+const projectCacheTTL = 2 * time.Minute
+
+type cachedProject struct {
+	Project   *Project  `json:"project"`
+	FetchedAt time.Time `json:"fetchedAt"`
 }
 
+func projectCachePath(owner string, number int) (string, error) {
+	base, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	key := fmt.Sprintf("%s-%d", owner, number)
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))[:12]
+	return filepath.Join(base, "gh-planning", "projects", hash+".json"), nil
+}
+
+func loadProjectCache(owner string, number int) (*Project, bool) {
+	path, err := projectCachePath(owner, number)
+	if err != nil {
+		return nil, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, false
+	}
+	var cached cachedProject
+	if err := json.Unmarshal(data, &cached); err != nil {
+		return nil, false
+	}
+	if time.Since(cached.FetchedAt) > projectCacheTTL {
+		return nil, false
+	}
+	return cached.Project, true
+}
+
+func saveProjectCache(owner string, number int, project *Project) {
+	path, err := projectCachePath(owner, number)
+	if err != nil {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	data, err := json.Marshal(cachedProject{Project: project, FetchedAt: time.Now()})
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(path, data, 0o644)
+}
+
+func GetProject(ctx context.Context, owner string, number int) (*Project, error) {
+	if cached, ok := loadProjectCache(owner, number); ok {
+		return cached, nil
+	}
+
+	fmt.Fprintf(os.Stderr, "Fetching project data...")
+
+	project := &Project{Items: map[string][]ProjectItem{}}
+	var cursor string
+	page := 0
+
+	for {
+		page++
+		if page > 1 {
+			fmt.Fprintf(os.Stderr, ".")
+		}
+		vars := map[string]interface{}{"owner": owner, "number": number}
+		if cursor != "" {
+			vars["cursor"] = cursor
+		}
+		payload, err := GraphQL(ctx, projectItemsQuery, vars)
+		if err != nil {
+			return nil, err
+		}
+		var resp projectItemsResponse
+		if err := json.Unmarshal(payload, &resp); err != nil {
+			return nil, err
+		}
+		if resp.Data.User.ProjectV2 == nil {
+			return nil, errors.New("project not found")
+		}
+		if project.Title == "" {
+			project.Title = resp.Data.User.ProjectV2.Title
+		}
+		for _, node := range resp.Data.User.ProjectV2.Items.Nodes {
+			if node.Content == nil {
+				continue
+			}
+			status := "No Status"
+			fields := map[string]string{}
+			for _, field := range node.FieldValues.Nodes {
+				if field.Field.Name != "" && field.Name != "" {
+					fields[field.Field.Name] = field.Name
+				}
+				if strings.EqualFold(field.Field.Name, "Status") && field.Name != "" {
+					status = field.Name
+				}
+			}
+			item := ProjectItem{
+				ID:          node.ID,
+				Title:       node.Content.Title,
+				Number:      node.Content.Number,
+				URL:         node.Content.URL,
+				State:       node.Content.State,
+				CreatedAt:   node.Content.CreatedAt,
+				UpdatedAt:   node.Content.UpdatedAt,
+				Repository:  node.Content.Repository.NameWithOwner,
+				Status:      status,
+				ContentType: node.Content.Typename,
+				Fields:      fields,
+			}
+			for _, assignee := range node.Content.Assignees.Nodes {
+				item.Assignees = append(item.Assignees, assignee.Login)
+			}
+			for _, label := range node.Content.Labels.Nodes {
+				item.Labels = append(item.Labels, label.Name)
+			}
+			project.Items[status] = append(project.Items[status], item)
+		}
+
+		if !resp.Data.User.ProjectV2.Items.PageInfo.HasNextPage {
+			break
+		}
+		cursor = resp.Data.User.ProjectV2.Items.PageInfo.EndCursor
+	}
+
+	fmt.Fprintf(os.Stderr, " done (%d items, cached for %s)\n", totalItems(project), projectCacheTTL)
+	saveProjectCache(owner, number, project)
+	return project, nil
+}
 const projectInfoQuery = `query($owner: String!, $number: Int!) {
   user(login: $owner) {
     projectV2(number: $number) {
@@ -286,4 +376,12 @@ func VerifyProject(ctx context.Context, owner string, number int) (string, error
 		return "", errors.New("project not found")
 	}
 	return title, nil
+}
+
+func totalItems(p *Project) int {
+count := 0
+for _, items := range p.Items {
+count += len(items)
+}
+return count
 }

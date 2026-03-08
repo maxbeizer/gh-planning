@@ -5,17 +5,13 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"time"
 )
-
-const apiDelay = 3 * time.Second
 
 func Run(ctx context.Context, args ...string) ([]byte, error) {
 	return runGH(ctx, args...)
 }
 
 func runGH(ctx context.Context, args ...string) ([]byte, error) {
-	time.Sleep(apiDelay)
 	cmd := exec.CommandContext(ctx, "gh", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

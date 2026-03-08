@@ -11,10 +11,13 @@ gh extension install maxbeizer/gh-planning
 ## Quick Start
 
 ```bash
-# 1) Initialize default project
+# Interactive guided setup (recommended for first-time users)
+gh planning setup
+
+# Or initialize directly with flags
 gh planning init --project 25 --owner maxbeizer
 
-# 2) View status
+# View status
 gh planning status
 
 # 3) Track a new issue in your project
@@ -29,6 +32,15 @@ gh planning focus maxbeizer/app#42
 ### `gh planning`
 
 Shows a quick summary of your current focus session and default project status counts.
+
+### `gh planning setup`
+
+Interactive walkthrough that explains what gh-planning does and configures
+your default project, team, 1-1 repo pattern, and agent rate limit step by step.
+
+```bash
+gh planning setup
+```
 
 ### `gh planning init`
 
@@ -134,11 +146,33 @@ gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout flo
 
 ### `gh planning agent-context`
 
-Summarize everything an AI agent needs to start work.
+Summarize everything an AI agent needs to start work. Use `--new-session`
+at the start of each agent conversation.
 
 ```bash
-gh planning agent-context
+gh planning agent-context --new-session
 gh planning agent-context --issue 42 --repo maxbeizer/app
+```
+
+### `gh planning log`
+
+Log progress, decisions, blockers, and findings against the current focus issue.
+
+```bash
+gh planning log "OAuth callback working"
+gh planning log --decision "Using JWT for stateless auth"
+gh planning log --blocker "Need API key"
+gh planning log --tried "Session approach, too complex"
+gh planning log --result "Latency down to 45ms"
+```
+
+### `gh planning logs`
+
+Show the progress log timeline.
+
+```bash
+gh planning logs
+gh planning logs --all --since 7d
 ```
 
 ### `gh planning claim <issue>`

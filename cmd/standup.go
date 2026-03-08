@@ -131,18 +131,45 @@ func runStandup(cmd *cobra.Command, args []string) error {
 
 func buildStandup(ctx context.Context, user string, since time.Time, project *github.Project) (standupData, error) {
 	queryDate := since.Format(time.RFC3339)
-	mergedPRs, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:merged merged:>%s", user, queryDate))
-	if err != nil {
-		return standupData{}, err
+
+	type searchResult struct {
+		items []github.SearchIssue
+		err   error
 	}
-	closedIssues, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:issue is:closed closed:>%s", user, queryDate))
-	if err != nil {
-		return standupData{}, err
+
+	mergedCh := make(chan searchResult, 1)
+	closedCh := make(chan searchResult, 1)
+	reviewCh := make(chan searchResult, 1)
+
+	go func() {
+		items, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:merged merged:>%s", user, queryDate))
+		mergedCh <- searchResult{items, err}
+	}()
+	go func() {
+		items, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:issue is:closed closed:>%s", user, queryDate))
+		closedCh <- searchResult{items, err}
+	}()
+	go func() {
+		items, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:open review:required", user))
+		reviewCh <- searchResult{items, err}
+	}()
+
+	merged := <-mergedCh
+	if merged.err != nil {
+		return standupData{}, merged.err
 	}
-	inReview, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:open review:required", user))
-	if err != nil {
-		return standupData{}, err
+	closed := <-closedCh
+	if closed.err != nil {
+		return standupData{}, closed.err
 	}
+	review := <-reviewCh
+	if review.err != nil {
+		return standupData{}, review.err
+	}
+
+	mergedPRs := merged.items
+	closedIssues := closed.items
+	inReview := review.items
 	inProgress := filterProjectByStatus(project, user, "in progress")
 	blocked := filterProjectByStatus(project, user, "blocked")
 

@@ -179,7 +179,7 @@ func createSubIssues(ctx context.Context, repo string, parentNumber int, items [
 		if projectID != "" {
 			_, _ = github.AddItemToProject(ctx, projectID, view.ID)
 		}
-		created = append(created, view)
+		created = append(created, *view)
 	}
 	return created, nil
 }

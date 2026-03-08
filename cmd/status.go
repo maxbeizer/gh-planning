@@ -16,10 +16,13 @@ import (
 )
 
 var statusOpts struct {
-	Project  int
-	Owner    string
-	Assignee string
-	Stale    string
+	Project   int
+	Owner     string
+	Assignee  string
+	Stale     string
+	Exclude   []string
+	Board     bool
+	Swimlanes bool
 }
 
 var statusCmd = &cobra.Command{
@@ -33,6 +36,9 @@ func init() {
 	statusCmd.Flags().StringVar(&statusOpts.Owner, "owner", "", "Project owner")
 	statusCmd.Flags().StringVar(&statusOpts.Assignee, "assignee", "", "Filter by assignee")
 	statusCmd.Flags().StringVar(&statusOpts.Stale, "stale", "", "Only show items stale for this duration")
+	statusCmd.Flags().StringSliceVar(&statusOpts.Exclude, "exclude", nil, "Exclude statuses (e.g. --exclude Done,Closed)")
+	statusCmd.Flags().BoolVar(&statusOpts.Board, "board", false, "Show kanban board view")
+	statusCmd.Flags().BoolVar(&statusOpts.Swimlanes, "swimlanes", false, "Add assignee swimlanes to board view (implies --board)")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -59,7 +65,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	filtered := filterProjectItems(projectData, statusOpts.Assignee, staleDuration)
+	filtered := filterProjectItems(projectData, statusOpts.Assignee, staleDuration, statusOpts.Exclude)
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
@@ -72,13 +78,28 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("📊 Project: %s (#%d)\n\n", projectData.Title, project)
-	printStatusGroups(filtered, staleDuration)
+	if statusOpts.Board || statusOpts.Swimlanes {
+		if statusOpts.Swimlanes {
+			printSwimlaneBoardView(filtered)
+		} else {
+			printBoardView(filtered)
+		}
+	} else {
+		printStatusGroups(filtered, staleDuration)
+	}
 	return nil
 }
 
-func filterProjectItems(project *github.Project, assignee string, stale time.Duration) map[string][]github.ProjectItem {
+func filterProjectItems(project *github.Project, assignee string, stale time.Duration, exclude []string) map[string][]github.ProjectItem {
+	excludeSet := map[string]bool{}
+	for _, e := range exclude {
+		excludeSet[strings.ToLower(strings.TrimSpace(e))] = true
+	}
 	filtered := map[string][]github.ProjectItem{}
 	for status, items := range project.Items {
+		if excludeSet[strings.ToLower(status)] {
+			continue
+		}
 		for _, item := range items {
 			if assignee != "" {
 				found := false
@@ -137,8 +158,10 @@ func decorateStatus(status, header string) string {
 		return "🔵 " + header
 	case "backlog":
 		return "📋 " + header
-	case "done", "closed", "complete":
+	case "done", "closed", "complete", "completed":
 		return "✅ " + header
+	case "needs my attention", "needs review", "in review":
+		return "🔍 " + header
 	default:
 		return "• " + header
 	}

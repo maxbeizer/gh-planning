@@ -20,9 +20,18 @@ type Handoff struct {
 	Uncertain   []string  `json:"uncertain,omitempty"`
 }
 
+type LogEntry struct {
+	Issue     string    `json:"issue"`
+	SessionID string    `json:"sessionId"`
+	Time      time.Time `json:"time"`
+	Message   string    `json:"message"`
+	Kind      string    `json:"kind"` // progress, decision, blocker, hypothesis, tried, result
+}
+
 type State struct {
-	LastSeen time.Time `json:"lastSeen,omitempty"`
-	Handoffs []Handoff `json:"handoffs,omitempty"`
+	LastSeen time.Time  `json:"lastSeen,omitempty"`
+	Handoffs []Handoff  `json:"handoffs,omitempty"`
+	Logs     []LogEntry `json:"logs,omitempty"`
 }
 
 func path() (string, error) {
@@ -83,4 +92,31 @@ func AddHandoff(h Handoff) error {
 	}
 	st.Handoffs = append(st.Handoffs, h)
 	return Save(st)
+}
+
+func AddLog(entry LogEntry) error {
+	st, err := Load()
+	if err != nil {
+		return err
+	}
+	st.Logs = append(st.Logs, entry)
+	return Save(st)
+}
+
+func GetLogs(issue string, since time.Time) ([]LogEntry, error) {
+	st, err := Load()
+	if err != nil {
+		return nil, err
+	}
+	var result []LogEntry
+	for _, entry := range st.Logs {
+		if issue != "" && entry.Issue != issue {
+			continue
+		}
+		if !since.IsZero() && entry.Time.Before(since) {
+			continue
+		}
+		result = append(result, entry)
+	}
+	return result, nil
 }

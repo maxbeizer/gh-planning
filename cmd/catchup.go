@@ -82,46 +82,104 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 		label = formatSinceLabel(sinceTime)
 	}
 
-	currentUser, err := github.CurrentUser(cmd.Context())
-	if err != nil {
-		return err
+	// Parallel: CurrentUser + GetProject (independent)
+	type userResult struct {
+		user string
+		err  error
+	}
+	type projectResult struct {
+		data *github.Project
+		err  error
 	}
 
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
-	if err != nil {
-		return err
+	userCh := make(chan userResult, 1)
+	projectCh := make(chan projectResult, 1)
+
+	go func() {
+		user, err := github.CurrentUser(cmd.Context())
+		userCh <- userResult{user, err}
+	}()
+	go func() {
+		data, err := github.GetProject(cmd.Context(), owner, project)
+		projectCh <- projectResult{data, err}
+	}()
+
+	ur := <-userCh
+	if ur.err != nil {
+		return ur.err
 	}
+	currentUser := ur.user
+
+	pr := <-projectCh
+	if pr.err != nil {
+		return pr.err
+	}
+	projectData := pr.data
+
 	repos := uniqueRepos(projectData)
 	repoQuery := buildRepoQuery(repos)
 	queryDate := sinceTime.Format(time.RFC3339)
 
-	newIssues, err := github.SearchIssues(cmd.Context(), composeQuery(repoQuery, fmt.Sprintf("is:issue created:>%s", queryDate)))
-	if err != nil {
-		return err
+	// Parallel: all 5 search queries (independent, only need currentUser + repoQuery + queryDate)
+	type searchResult struct {
+		items []github.SearchIssue
+		err   error
 	}
-	mergedPRs, err := github.SearchIssues(cmd.Context(), composeQuery(repoQuery, fmt.Sprintf("is:pr is:merged merged:>%s", queryDate)))
-	if err != nil {
-		return err
+
+	newCh := make(chan searchResult, 1)
+	mergedCh := make(chan searchResult, 1)
+	closedCh := make(chan searchResult, 1)
+	assignedCh := make(chan searchResult, 1)
+	reviewCh := make(chan searchResult, 1)
+
+	go func() {
+		items, err := github.SearchIssues(cmd.Context(), composeQuery(repoQuery, fmt.Sprintf("is:issue created:>%s", queryDate)))
+		newCh <- searchResult{items, err}
+	}()
+	go func() {
+		items, err := github.SearchIssues(cmd.Context(), composeQuery(repoQuery, fmt.Sprintf("is:pr is:merged merged:>%s", queryDate)))
+		mergedCh <- searchResult{items, err}
+	}()
+	go func() {
+		items, err := github.SearchIssues(cmd.Context(), composeQuery(repoQuery, fmt.Sprintf("is:issue is:closed closed:>%s", queryDate)))
+		closedCh <- searchResult{items, err}
+	}()
+	go func() {
+		items, err := github.SearchIssues(cmd.Context(), fmt.Sprintf("assignee:%s updated:>%s sort:updated", currentUser, queryDate))
+		assignedCh <- searchResult{items, err}
+	}()
+	go func() {
+		items, err := github.SearchIssues(cmd.Context(), fmt.Sprintf("review-requested:%s type:pr is:open updated:>%s", currentUser, queryDate))
+		reviewCh <- searchResult{items, err}
+	}()
+
+	newResult := <-newCh
+	if newResult.err != nil {
+		return newResult.err
 	}
-	closedIssues, err := github.SearchIssues(cmd.Context(), composeQuery(repoQuery, fmt.Sprintf("is:issue is:closed closed:>%s", queryDate)))
-	if err != nil {
-		return err
+	mergedResult := <-mergedCh
+	if mergedResult.err != nil {
+		return mergedResult.err
 	}
-	assignedUpdates, err := github.SearchIssues(cmd.Context(), fmt.Sprintf("assignee:%s updated:>%s sort:updated", currentUser, queryDate))
-	if err != nil {
-		return err
+	closedResult := <-closedCh
+	if closedResult.err != nil {
+		return closedResult.err
 	}
-	reviewRequests, err := github.SearchIssues(cmd.Context(), fmt.Sprintf("review-requested:%s type:pr is:open updated:>%s", currentUser, queryDate))
-	if err != nil {
-		return err
+	assignedResult := <-assignedCh
+	if assignedResult.err != nil {
+		return assignedResult.err
+	}
+	reviewResult := <-reviewCh
+	if reviewResult.err != nil {
+		return reviewResult.err
 	}
 
 	sections := []catchupSection{
-		{Title: "📥 New", Items: formatCatchupItemsWithAuthor(newIssues)},
-		{Title: "✅ Merged", Items: formatCatchupItems(mergedPRs)},
-		{Title: "✅ Closed", Items: formatCatchupItems(closedIssues)},
-		{Title: "💬 Activity on your items", Items: filterCommentActivity(assignedUpdates)},
-		{Title: "👀 Needs your review", Items: formatCatchupItems(reviewRequests)},
+		{Title: "📥 New", Items: formatCatchupItemsWithAuthor(newResult.items)},
+		{Title: "✅ Merged", Items: formatCatchupItems(mergedResult.items)},
+		{Title: "✅ Closed", Items: formatCatchupItems(closedResult.items)},
+		{Title: "💬 Activity on your items", Items: filterCommentActivity(assignedResult.items)},
+		{Title: "👀 Needs your review", Items: formatCatchupItems(reviewResult.items)},
 	}
 
 	if err := state.UpdateLastSeen(time.Now().UTC()); err != nil {

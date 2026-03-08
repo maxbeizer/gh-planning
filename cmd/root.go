@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/output"
@@ -51,6 +50,9 @@ func init() {
 	rootCmd.AddCommand(queueCmd)
 	rootCmd.AddCommand(reviewCmd)
 	rootCmd.AddCommand(copilotCmd)
+	rootCmd.AddCommand(setupCmd)
+	rootCmd.AddCommand(logCmd)
+	rootCmd.AddCommand(logsCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
@@ -78,6 +80,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, rootOpts)
 	}
 
+	fmt.Println("gh-planning — developer command center")
+	fmt.Println()
+
 	if focus != nil {
 		fmt.Printf("🎯 Focus: %s (%s)\n", focus.Issue, humanizeDuration(focus.Elapsed()))
 	} else {
@@ -86,7 +91,24 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if statusSummary != "" {
 		fmt.Printf("📊 %s\n", statusSummary)
 	} else if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
-		fmt.Fprintln(os.Stderr, "Run `gh planning init` to set a default project.")
+		fmt.Println("📊 No project configured")
+	}
+
+	fmt.Println()
+	if focus != nil {
+		fmt.Println("  gh planning log \"message\"    — log progress")
+		fmt.Println("  gh planning handoff <issue>  — hand off to next session")
+		fmt.Println("  gh planning complete <issue> — mark done")
+	} else {
+		fmt.Println("  gh planning status           — view your project board")
+		fmt.Println("  gh planning focus <issue>    — start focusing on an issue")
+		fmt.Println("  gh planning queue            — find work to pick up")
+	}
+	fmt.Println("  gh planning standup          — generate a standup report")
+	fmt.Println()
+	fmt.Println("Run `gh planning --help` for all commands.")
+	if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
+		fmt.Println("Run `gh planning setup` to get started.")
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -30,7 +31,9 @@ type searchResponse struct {
 }
 
 func SearchIssues(ctx context.Context, query string) ([]SearchIssue, error) {
-	payload, err := runGH(ctx, "api", "search/issues", "-f", fmt.Sprintf("q=%s", query))
+	encoded := url.QueryEscape(query)
+	endpoint := fmt.Sprintf("search/issues?q=%s&per_page=100", encoded)
+	payload, err := runGH(ctx, "api", endpoint)
 	if err != nil {
 		return nil, err
 	}

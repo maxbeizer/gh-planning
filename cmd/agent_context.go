@@ -45,16 +45,24 @@ type agentContextBlocked struct {
 }
 
 var agentContextOpts struct {
-	Project int
-	Owner   string
-	Issue   string
-	Repo    string
+	Project    int
+	Owner      string
+	Issue      string
+	Repo       string
+	NewSession bool
 }
 
 var agentContextCmd = &cobra.Command{
 	Use:   "agent-context",
 	Short: "Summarize project context for an AI agent",
-	RunE:  runAgentContext,
+	Long: `Display everything an agent needs to start or continue work.
+
+Use --new-session at the start of each agent conversation to get full
+context: open issues, recent logs, pending handoffs, and what to work on next.
+
+Add this to your CLAUDE.md, system prompt, or agent instructions:
+  Run ` + "`gh planning agent-context --new-session`" + ` at conversation start.`,
+	RunE: runAgentContext,
 }
 
 func init() {
@@ -62,6 +70,7 @@ func init() {
 	agentContextCmd.Flags().StringVar(&agentContextOpts.Owner, "owner", "", "Project owner")
 	agentContextCmd.Flags().StringVar(&agentContextOpts.Issue, "issue", "", "Issue URL, number, or owner/repo#number")
 	agentContextCmd.Flags().StringVar(&agentContextOpts.Repo, "repo", "", "Repository (owner/repo) for --issue when using a number")
+	agentContextCmd.Flags().BoolVar(&agentContextOpts.NewSession, "new-session", false, "Mark a new session start (updates last-seen timestamp)")
 }
 
 func runAgentContext(cmd *cobra.Command, args []string) error {
@@ -101,10 +110,48 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
-	if err != nil {
-		return err
+	// Parallel: GetProject + CurrentUser + fetchIssueTitle (all independent)
+	type projectResult struct {
+		data *github.Project
+		err  error
 	}
+	type userResult struct {
+		user string
+		err  error
+	}
+	type titleResult struct {
+		title string
+	}
+
+	projectCh := make(chan projectResult, 1)
+	userCh := make(chan userResult, 1)
+	titleCh := make(chan titleResult, 1)
+
+	go func() {
+		data, err := github.GetProject(cmd.Context(), owner, project)
+		projectCh <- projectResult{data, err}
+	}()
+	go func() {
+		user, err := github.CurrentUser(cmd.Context())
+		userCh <- userResult{user, err}
+	}()
+	go func() {
+		if focusRepo != "" && focusNumber != 0 {
+			title, _ := fetchIssueTitle(cmd.Context(), focusRepo, focusNumber)
+			titleCh <- titleResult{title}
+		} else {
+			titleCh <- titleResult{}
+		}
+	}()
+
+	pr := <-projectCh
+	if pr.err != nil {
+		return pr.err
+	}
+	projectData := pr.data
+	ur := <-userCh
+	currentUser := ur.user
+	tr := <-titleCh
 
 	statusCounts := map[string]int{}
 	for status, items := range projectData.Items {
@@ -136,8 +183,7 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	if focusRepo != "" && focusNumber != 0 {
 		focusIssue.Repo = focusRepo
 		focusIssue.Number = focusNumber
-		issueTitle, _ := fetchIssueTitle(cmd.Context(), focusRepo, focusNumber)
-		focusIssue.Title = issueTitle
+		focusIssue.Title = tr.title
 		target := fmt.Sprintf("%s#%d", focusRepo, focusNumber)
 		for _, h := range st.Handoffs {
 			if h.Issue == target {
@@ -168,9 +214,9 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		decisions = decisions[:5]
 	}
 
+	// Fetch review requests (depends on currentUser from parallel call above)
 	reviewRequests := []agentContextReview{}
-	currentUser, err := github.CurrentUser(cmd.Context())
-	if err == nil && currentUser != "" {
+	if currentUser != "" {
 		query := fmt.Sprintf("is:pr state:open review-requested:%s", currentUser)
 		results, err := github.SearchIssues(cmd.Context(), query)
 		if err != nil {
@@ -197,6 +243,32 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		"team":           cfg.Team,
 	}
 
+	// Gather recent logs
+	var logsSince time.Time
+	if !st.LastSeen.IsZero() {
+		logsSince = st.LastSeen
+	} else {
+		logsSince = time.Now().Add(-7 * 24 * time.Hour)
+	}
+	recentLogs, _ := state.GetLogs("", logsSince)
+	if len(recentLogs) > 10 {
+		recentLogs = recentLogs[len(recentLogs)-10:]
+	}
+
+	// Get next suggested item from queue
+	var nextUp *github.ProjectItem
+	for _, status := range []string{"Ready", "Backlog"} {
+		if items, ok := projectData.Items[status]; ok && len(items) > 0 {
+			nextUp = &items[0]
+			break
+		}
+	}
+
+	// Update last-seen if --new-session
+	if agentContextOpts.NewSession {
+		_ = state.UpdateLastSeen(time.Now())
+	}
+
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
 			"focus":        focusIssue,
@@ -205,14 +277,19 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 			"statusCounts": statusCounts,
 			"handoffs":     focusHandoffs,
 			"decisions":    decisions,
+			"recentLogs":   recentLogs,
 			"reviews":      reviewRequests,
 			"blocked":      blockedItems,
+			"nextUp":       nextUp,
 			"config":       configPayload,
 		}
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
 	fmt.Println("🤖 Agent Context — gh-planning")
+	if agentContextOpts.NewSession {
+		fmt.Println("   (new session started)")
+	}
 	fmt.Println()
 
 	if focusRepo != "" && focusNumber != 0 {
@@ -228,6 +305,10 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		fmt.Println("📍 Focus: none")
 	}
 
+	if nextUp != nil {
+		fmt.Printf("📋 Next up: #%d \"%s\" (%s)\n", nextUp.Number, nextUp.Title, nextUp.Repository)
+	}
+
 	fmt.Println()
 	fmt.Printf("📊 Project #%d Status:\n", project)
 	statusKeys := make([]string, 0, len(statusCounts))
@@ -241,6 +322,15 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	}
 	if len(statusParts) > 0 {
 		fmt.Printf("   %s\n", strings.Join(statusParts, " | "))
+	}
+
+	if len(recentLogs) > 0 {
+		fmt.Println()
+		fmt.Println("📝 Recent Logs:")
+		for _, entry := range recentLogs {
+			age := humanizeDuration(time.Since(entry.Time))
+			fmt.Printf("   • [%s] %s (%s, %s)\n", entry.Kind, entry.Message, entry.Issue, age)
+		}
 	}
 
 	fmt.Println()
@@ -279,6 +369,16 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	fmt.Printf("   • default-project: %d\n", cfg.DefaultProject)
 	if len(cfg.Team) > 0 {
 		fmt.Printf("   • team: %s\n", strings.Join(cfg.Team, ", "))
+	}
+
+	if agentContextOpts.NewSession {
+		fmt.Println()
+		fmt.Println("💡 Commands available:")
+		fmt.Println("   gh planning claim <issue>     — claim and start work")
+		fmt.Println("   gh planning log \"message\"     — log progress")
+		fmt.Println("   gh planning handoff <issue>   — structured handoff")
+		fmt.Println("   gh planning complete <issue>  — mark work done")
+		fmt.Println("   gh planning queue             — find more work")
 	}
 	return nil
 }
