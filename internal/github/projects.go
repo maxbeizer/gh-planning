@@ -9,17 +9,19 @@ import (
 )
 
 type ProjectItem struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Number      int       `json:"number"`
-	URL         string    `json:"url"`
-	State       string    `json:"state"`
-	UpdatedAt   time.Time `json:"updatedAt"`
-	Assignees   []string  `json:"assignees"`
-	Labels      []string  `json:"labels"`
-	Repository  string    `json:"repository"`
-	Status      string    `json:"status"`
-	ContentType string    `json:"contentType"`
+	ID          string            `json:"id"`
+	Title       string            `json:"title"`
+	Number      int               `json:"number"`
+	URL         string            `json:"url"`
+	State       string            `json:"state"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+	Assignees   []string          `json:"assignees"`
+	Labels      []string          `json:"labels"`
+	Repository  string            `json:"repository"`
+	Status      string            `json:"status"`
+	ContentType string            `json:"contentType"`
+	Fields      map[string]string `json:"fields,omitempty"`
 }
 
 type Project struct {
@@ -41,6 +43,7 @@ const projectItemsQuery = `query($owner: String!, $number: Int!) {
               number
               url
               state
+              createdAt
               updatedAt
               assignees(first: 5) { nodes { login } }
               labels(first: 10) { nodes { name } }
@@ -51,6 +54,7 @@ const projectItemsQuery = `query($owner: String!, $number: Int!) {
               number
               url
               state
+              createdAt
               updatedAt
               assignees(first: 5) { nodes { login } }
               labels(first: 10) { nodes { name } }
@@ -81,10 +85,11 @@ type projectItemsResponse struct {
 						ID      string `json:"id"`
 						Content *struct {
 							Typename string `json:"__typename"`
-							Title    string `json:"title"`
-							Number   int    `json:"number"`
-							URL      string `json:"url"`
-							State    string `json:"state"`
+							Title     string    `json:"title"`
+							Number    int       `json:"number"`
+							URL       string    `json:"url"`
+							State     string    `json:"state"`
+							CreatedAt time.Time `json:"createdAt"`
 							UpdatedAt time.Time `json:"updatedAt"`
 							Assignees struct {
 								Nodes []struct {
@@ -133,10 +138,13 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 			continue
 		}
 		status := "No Status"
+		fields := map[string]string{}
 		for _, field := range node.FieldValues.Nodes {
+			if field.Field.Name != "" && field.Name != "" {
+				fields[field.Field.Name] = field.Name
+			}
 			if strings.EqualFold(field.Field.Name, "Status") && field.Name != "" {
 				status = field.Name
-				break
 			}
 		}
 		item := ProjectItem{
@@ -145,10 +153,12 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 			Number:      node.Content.Number,
 			URL:         node.Content.URL,
 			State:       node.Content.State,
+			CreatedAt:   node.Content.CreatedAt,
 			UpdatedAt:   node.Content.UpdatedAt,
 			Repository:  node.Content.Repository.NameWithOwner,
 			Status:      status,
 			ContentType: node.Content.Typename,
+			Fields:      fields,
 		}
 		for _, assignee := range node.Content.Assignees.Nodes {
 			item.Assignees = append(item.Assignees, assignee.Login)

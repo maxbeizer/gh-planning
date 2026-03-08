@@ -45,6 +45,11 @@ func init() {
 	rootCmd.AddCommand(teamCmd)
 	rootCmd.AddCommand(prepCmd)
 	rootCmd.AddCommand(pulseCmd)
+	rootCmd.AddCommand(agentContextCmd)
+	rootCmd.AddCommand(claimCmd)
+	rootCmd.AddCommand(completeCmd)
+	rootCmd.AddCommand(queueCmd)
+	rootCmd.AddCommand(reviewCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {

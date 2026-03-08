@@ -132,6 +132,47 @@ Post a structured session handoff to an issue.
 gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout flow"
 ```
 
+### `gh planning agent-context`
+
+Summarize everything an AI agent needs to start work.
+
+```bash
+gh planning agent-context
+gh planning agent-context --issue 42 --repo maxbeizer/app
+```
+
+### `gh planning claim <issue>`
+
+Claim an issue and move it to In Progress.
+
+```bash
+gh planning claim maxbeizer/app#42
+```
+
+### `gh planning complete <issue>`
+
+Post a completion handoff and move the issue forward.
+
+```bash
+gh planning complete maxbeizer/app#42 --done "OAuth flow" --pr 48
+```
+
+### `gh planning queue`
+
+Show items ready for agent processing.
+
+```bash
+gh planning queue --label agent-ready --status Backlog --status Ready
+```
+
+### `gh planning review <pr>`
+
+Quick review summary for a pull request.
+
+```bash
+gh planning review 48 --repo maxbeizer/app
+```
+
 ### `gh planning team`
 
 Show recent activity across your team.
