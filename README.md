@@ -132,6 +132,33 @@ Post a structured session handoff to an issue.
 gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout flow"
 ```
 
+### `gh planning team`
+
+Show recent activity across your team.
+
+```bash
+gh planning team --since 7d
+gh planning team --team maxbeizer,claudia-bot --quiet
+```
+
+### `gh planning prep <github-handle>`
+
+Generate a 1-1 preparation document.
+
+```bash
+gh planning prep maxbeizer --since 14d
+gh planning prep maxbeizer --notes
+```
+
+### `gh planning pulse`
+
+Show team health metrics.
+
+```bash
+gh planning pulse --since 30d
+gh planning pulse --team maxbeizer,claudia-bot
+```
+
 ## Global Flags
 
 All commands accept:

@@ -42,6 +42,9 @@ func init() {
 	rootCmd.AddCommand(catchupCmd)
 	rootCmd.AddCommand(breakdownCmd)
 	rootCmd.AddCommand(handoffCmd)
+	rootCmd.AddCommand(teamCmd)
+	rootCmd.AddCommand(prepCmd)
+	rootCmd.AddCommand(pulseCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
