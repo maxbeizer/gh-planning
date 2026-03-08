@@ -54,6 +54,7 @@ func init() {
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(logCmd)
 	rootCmd.AddCommand(logsCmd)
+	rootCmd.AddCommand(estimateCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
