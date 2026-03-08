@@ -26,7 +26,14 @@ type configFile struct {
 	Profiles      map[string]Config `yaml:"profiles,omitempty"`
 }
 
+// dirOverride, when non-empty, replaces the default config directory.
+// Used by tests to redirect config I/O to a temp directory.
+var dirOverride string
+
 func Dir() (string, error) {
+	if dirOverride != "" {
+		return dirOverride, nil
+	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err

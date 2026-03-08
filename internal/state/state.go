@@ -34,7 +34,14 @@ type State struct {
 	Logs     []LogEntry `json:"logs,omitempty"`
 }
 
+// dirOverride, when non-empty, replaces the default state directory.
+// Used by tests to redirect state I/O to a temp directory.
+var dirOverride string
+
 func path() (string, error) {
+	if dirOverride != "" {
+		return filepath.Join(dirOverride, "state.json"), nil
+	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
