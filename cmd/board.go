@@ -112,7 +112,14 @@ func printBoardView(groups map[string][]github.ProjectItem) {
 				assignee = "@" + item.Assignees[0]
 			}
 			card := fmt.Sprintf("#%d %s", item.Number, item.Title)
-			columns[i] = append(columns[i], padOrTruncate(card, innerWidth))
+			padded := padOrTruncate(card, innerWidth)
+			// Wrap the issue number in a clickable hyperlink
+			if item.URL != "" {
+				issueRef := fmt.Sprintf("#%d", item.Number)
+				linked := hyperlink(item.URL, issueRef)
+				padded = strings.Replace(padded, issueRef, linked, 1)
+			}
+			columns[i] = append(columns[i], padded)
 			if assignee != "" {
 				columns[i] = append(columns[i], padOrTruncate("   "+assignee, innerWidth))
 			}
@@ -272,7 +279,13 @@ func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
 					continue
 				}
 				card := fmt.Sprintf("  #%d %s", item.Number, item.Title)
-				columns[colIdx] = append(columns[colIdx], padOrTruncate(card, innerWidth))
+				padded := padOrTruncate(card, innerWidth)
+				if item.URL != "" {
+					issueRef := fmt.Sprintf("#%d", item.Number)
+					linked := hyperlink(item.URL, issueRef)
+					padded = strings.Replace(padded, issueRef, linked, 1)
+				}
+				columns[colIdx] = append(columns[colIdx], padded)
 				count++
 			}
 			if total > maxCardsPerColumn {

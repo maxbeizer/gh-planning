@@ -23,6 +23,7 @@ var statusOpts struct {
 	Exclude   []string
 	Board     bool
 	Swimlanes bool
+	Open      bool
 }
 
 var statusCmd = &cobra.Command{
@@ -39,6 +40,7 @@ func init() {
 	statusCmd.Flags().StringSliceVar(&statusOpts.Exclude, "exclude", nil, "Exclude statuses (e.g. --exclude Done,Closed)")
 	statusCmd.Flags().BoolVar(&statusOpts.Board, "board", false, "Show kanban board view")
 	statusCmd.Flags().BoolVar(&statusOpts.Swimlanes, "swimlanes", false, "Add assignee swimlanes to board view (implies --board)")
+	statusCmd.Flags().BoolVar(&statusOpts.Open, "open", false, "Open the project board in your browser")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -77,7 +79,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("📊 Project: %s (#%d)\n\n", projectData.Title, project)
+	fmt.Printf("📊 Project: %s (#%d)\n", projectData.Title, project)
+	fmt.Printf("   %s\n\n", projectURL(owner, project))
+
+	if statusOpts.Open {
+		_ = openURL(projectURL(owner, project))
+	}
+
 	if statusOpts.Board || statusOpts.Swimlanes {
 		if statusOpts.Swimlanes {
 			printSwimlaneBoardView(filtered)
@@ -145,7 +153,11 @@ func printStatusGroups(groups map[string][]github.ProjectItem, stale time.Durati
 			if stale > 0 && time.Since(item.UpdatedAt) >= stale {
 				staleMark = " ⚠️ stale"
 			}
-			fmt.Fprintf(w, "  #%d\t%s\t%s\t%s\t%s%s\n", item.Number, truncate(item.Title, 28), item.Repository, assignee, humanizeDuration(time.Since(item.UpdatedAt)), staleMark)
+			issueNum := fmt.Sprintf("#%d", item.Number)
+			if item.URL != "" {
+				issueNum = hyperlink(item.URL, issueNum)
+			}
+			fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s%s\n", issueNum, truncate(item.Title, 28), item.Repository, assignee, humanizeDuration(time.Since(item.UpdatedAt)), staleMark)
 		}
 		w.Flush()
 		fmt.Println()

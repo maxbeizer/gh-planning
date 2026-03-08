@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -40,4 +42,36 @@ func humanizeDuration(d time.Duration) string {
 	}
 	weeks := days / 7
 	return fmt.Sprintf("%dw ago", weeks)
+}
+
+func projectURL(owner string, project int) string {
+return fmt.Sprintf("https://github.com/users/%s/projects/%d", owner, project)
+}
+
+func openURL(url string) error {
+_, err := runCommand("open", url)
+return err
+}
+
+func runCommand(name string, args ...string) ([]byte, error) {
+cmd := exec.Command(name, args...)
+return cmd.Output()
+}
+
+// hyperlink wraps text in an OSC 8 terminal hyperlink escape sequence.
+// Terminals that support it (iTerm2, Windows Terminal, etc.) make the
+// text clickable. Only emits escapes when stdout is a terminal.
+func hyperlink(url, text string) string {
+	if !isTerminal() {
+		return text
+	}
+	return fmt.Sprintf("\x1b]8;;%s\x07%s\x1b]8;;\x07", url, text)
+}
+
+func isTerminal() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }

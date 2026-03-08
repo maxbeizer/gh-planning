@@ -17,6 +17,7 @@ var boardOpts struct {
 	Exclude     []string
 	Swimlanes   bool
 	IncludeDone bool
+	Open        bool
 }
 
 // Default statuses to exclude when --include-done is not set.
@@ -36,6 +37,7 @@ func init() {
 	boardCmd.Flags().StringSliceVar(&boardOpts.Exclude, "exclude", nil, "Exclude statuses (e.g. --exclude Done,Closed)")
 	boardCmd.Flags().BoolVar(&boardOpts.Swimlanes, "swimlanes", false, "Add assignee swimlanes to board view")
 	boardCmd.Flags().BoolVar(&boardOpts.IncludeDone, "include-done", false, "Include Done/Completed/Closed statuses (excluded by default)")
+	boardCmd.Flags().BoolVar(&boardOpts.Open, "open", false, "Open the project board in your browser")
 }
 
 func runBoard(cmd *cobra.Command, args []string) error {
@@ -80,7 +82,13 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("📊 Project: %s (#%d)\n\n", projectData.Title, project)
+	fmt.Printf("📊 Project: %s (#%d)\n", projectData.Title, project)
+	fmt.Printf("   %s\n\n", projectURL(owner, project))
+
+	if boardOpts.Open {
+		_ = openURL(projectURL(owner, project))
+	}
+
 	if boardOpts.Swimlanes {
 		printSwimlaneBoardView(filtered)
 	} else {
