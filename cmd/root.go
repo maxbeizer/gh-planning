@@ -34,6 +34,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(boardCmd)
 	rootCmd.AddCommand(trackCmd)
 	rootCmd.AddCommand(focusCmd)
 	rootCmd.AddCommand(unfocusCmd)
