@@ -28,10 +28,17 @@ type LogEntry struct {
 	Kind      string    `json:"kind"` // progress, decision, blocker, hypothesis, tried, result
 }
 
+type Dependency struct {
+	Blocked   string    `json:"blocked"`   // owner/repo#number
+	BlockedBy string    `json:"blockedBy"` // owner/repo#number
+	Time      time.Time `json:"time"`
+}
+
 type State struct {
-	LastSeen time.Time  `json:"lastSeen,omitempty"`
-	Handoffs []Handoff  `json:"handoffs,omitempty"`
-	Logs     []LogEntry `json:"logs,omitempty"`
+	LastSeen     time.Time    `json:"lastSeen,omitempty"`
+	Handoffs     []Handoff    `json:"handoffs,omitempty"`
+	Logs         []LogEntry   `json:"logs,omitempty"`
+	Dependencies []Dependency `json:"dependencies,omitempty"`
 }
 
 // dirOverride, when non-empty, replaces the default state directory.
@@ -107,6 +114,36 @@ func AddLog(entry LogEntry) error {
 		return err
 	}
 	st.Logs = append(st.Logs, entry)
+	return Save(st)
+}
+
+func AddDependency(dep Dependency) error {
+	st, err := Load()
+	if err != nil {
+		return err
+	}
+	// Avoid duplicates.
+	for _, d := range st.Dependencies {
+		if d.Blocked == dep.Blocked && d.BlockedBy == dep.BlockedBy {
+			return nil
+		}
+	}
+	st.Dependencies = append(st.Dependencies, dep)
+	return Save(st)
+}
+
+func RemoveDependency(blocked string) error {
+	st, err := Load()
+	if err != nil {
+		return err
+	}
+	filtered := st.Dependencies[:0]
+	for _, d := range st.Dependencies {
+		if d.Blocked != blocked {
+			filtered = append(filtered, d)
+		}
+	}
+	st.Dependencies = filtered
 	return Save(st)
 }
 
