@@ -1,103 +1,52 @@
-# WORKSPACE.md — Agent Context File
+# WORKSPACE.md — Decisions & Direction
 
-> This file provides structured context for AI agents working in gh-planning.
-> Read this at session start to understand the project, its architecture,
-> and current priorities.
-
----
-
-## Project
-
-| Field | Value |
-|-------|-------|
-| Name | gh-planning |
-| Type | GitHub CLI extension (Go) |
-| Install | `gh extension install maxbeizer/gh-planning` |
-| Owner | @maxbeizer |
-| Repo | [maxbeizer/gh-planning](https://github.com/maxbeizer/gh-planning) |
-
-**What it does:** Terminal-based command center for GitHub Projects (V2).
-Tracks issues, generates standups, manages focus sessions, breaks down
-issues, coordinates team activity, and integrates with Copilot via MCP.
+> Living document of design decisions, current priorities, and where
+> gh-planning is headed. For repo structure and coding conventions,
+> see `.github/copilot-instructions.md`.
 
 ---
 
-## Architecture
+## Design Decisions
 
-```
-main.go                  → entry point, signal handling
-cmd/                     → cobra commands (one file per command)
-  root.go                → root command, global flags
-  setup.go               → interactive first-time setup
-  status.go              → project status (list view)
-  board.go               → kanban/swimlane rendering
-  board_cmd.go           → standalone board command
-  standup.go             → standup report generation
-  agent_context.go       → agent session-start context
-  log.go                 → progress logging
-  claim.go / complete.go → agent work lifecycle
-  handoff.go             → structured handoffs
-  queue.go               → agent work queue
-  config.go              → config management + profiles
-  helpers.go             → shared utilities
-  agent_helpers.go       → agent-specific helpers
-internal/
-  config/                → YAML config with named profiles
-  github/                → gh CLI wrapper (GraphQL, REST, search)
-  session/               → focus session tracking (current.json)
-  state/                 → persistent state (handoffs, logs)
-  output/                → JSON output formatting
-copilot-skills/          → markdown skill definitions
-mcp/                     → MCP server for Copilot tool registration
-docs/                    → guide and agent instructions
-```
-
----
-
-## Key Conventions
-
-- **CLI framework:** cobra — each command is a file in `cmd/`
-- **GitHub API:** shells out to `gh` CLI, NOT the Go API client
-- **Config:** `~/.config/gh-planning/config.yaml`, supports named profiles
-- **State:** `~/.config/gh-planning/state.json` (handoffs, logs)
-- **Cache:** `~/Library/Caches/gh-planning/` (project data, 2min TTL)
-- **Output:** all commands support `--json` and `--jq` flags
-- **Error handling:** return errors up, no `os.Exit` in commands
-- **Build:** `make build` → `bin/gh-planning`, `make ci` for full check
+| Decision | Context | Date |
+|----------|---------|------|
+| Shell out to `gh` CLI instead of Go API client | Simpler auth, leverages user's existing `gh` setup, avoids token management | Pre-2026 |
+| 3-second API delay on every call | Was a naive rate-limit guard — **removed**, replaced with parallelized calls | 2026-03-08 |
+| YAML config with named profiles | Users need to switch between personal and work projects without re-configuring | 2026-03-08 |
+| td-inspired agent workflow | `agent-context --new-session` as the "run this first" pattern, structured handoffs with done/remaining/decisions/uncertain | 2026-03-08 |
+| Progress logging (`log` command) | Agents need to record decisions and blockers *during* work so the next session has context, not just at handoff | 2026-03-08 |
+| Project data cache (2min TTL) | 350+ item projects take ~7s to fetch via paginated GraphQL; cache makes repeated commands instant | 2026-03-08 |
+| `go-runewidth` for column alignment | Emoji characters break `len()`-based padding; terminal display width must use Unicode-aware measurement | 2026-03-08 |
+| User-first, org-fallback for GraphQL | Rather than requiring config to distinguish user vs org projects, try `user()` then fall back to `organization()` | 2026-03-08 |
 
 ---
 
 ## Current Priorities
 
 1. Merge open PRs (#6–#10): tests, MCP tools, org support, board cmd, CI
-2. Improve board rendering for narrow terminals
-3. Consider TUI mode (bubbletea) for interactive board
+2. Release v0.1.0 once PRs land and CI is green
+3. Improve board rendering for narrow terminals / large boards
+4. Consider interactive TUI mode (bubbletea) for the board
 
 ---
 
-## Open PRs
+## Future Directions
 
-<!-- Dynamic — refresh with: gh pr list --repo maxbeizer/gh-planning --state open -->
-
-| PR | Title | Branch |
-|----|-------|--------|
-| #6 | Add test coverage | add-tests |
-| #7 | Register new commands in MCP tools | register-mcp-tools |
-| #8 | Support org-owned projects | support-org-projects |
-| #9 | Add standalone board command | standalone-board-cmd |
-| #10 | Add CI and release workflows | add-ci-workflow |
+- **Interactive board** — bubbletea-based TUI with keyboard navigation, drag-to-move issues between columns
+- **`gh planning sync`** — refresh WORKSPACE.md dynamic sections from live GitHub data
+- **Notifications** — surface @mentions, review requests, and CI failures in `catch-up`
+- **Multi-project** — commands that span multiple projects (e.g., standup across work + personal)
+- **Copilot agent loop** — packaged script/action that runs the full claim→log→complete cycle autonomously
+- **Metrics / velocity** — track cycle time, throughput, and blocked-time trends over time
 
 ---
 
-## Dependencies
+## Open Questions
 
-| Package | Purpose |
-|---------|---------|
-| `github.com/spf13/cobra` | CLI framework |
-| `gopkg.in/yaml.v3` | Config file parsing |
-| `github.com/mattn/go-runewidth` | Emoji-aware column alignment |
-| `golang.org/x/term` | Terminal width detection |
+- Should the cache TTL be configurable? (Currently hardcoded at 2 minutes)
+- Should `gh planning board` become the default output of `gh planning` (instead of the current summary)?
+- How should we handle GitHub's GraphQL rate limits for very large projects (1000+ items)?
 
 ---
 
-*Last manual update: 2026-03-08*
+*Last updated: 2026-03-08*
