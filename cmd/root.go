@@ -61,6 +61,7 @@ func init() {
 	rootCmd.AddCommand(blockedCmd)
 	rootCmd.AddCommand(unblockCmd)
 	rootCmd.AddCommand(criticalPathCmd)
+	rootCmd.AddCommand(daemonCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
