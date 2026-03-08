@@ -181,6 +181,7 @@ gh planning init --project 25 --owner maxbeizer
 | Concept | What it means |
 |---------|---------------|
 | **Project** | A GitHub Projects (V2) board. You set a default with `init` or `setup`. |
+| **Profile** | A named config set. Switch between work/personal with `config use`. |
 | **Focus** | Your current working issue. One at a time. Tracked locally with elapsed time. |
 | **Team** | A list of GitHub usernames. Used by `standup --team`, `team`, `pulse`, and `prep`. |
 | **Queue** | Project items filtered by label/status — the "inbox" for agent work. |
@@ -193,7 +194,9 @@ gh planning init --project 25 --owner maxbeizer
 | `setup` | Interactive first-time configuration walkthrough |
 | `init` | Set default project (non-interactive) |
 | `config set/show` | Read or write individual config values |
-| `status` | Project board summary grouped by status |
+| `config use/profiles/delete` | Switch between named config profiles |
+| `status` | Project board summary (list, `--board`, or `--swimlanes`) |
+| `board` | Kanban board view (excludes Done by default) |
 | `track` | Create an issue and add it to the project |
 | `focus` / `unfocus` | Set or clear your current working issue |
 | `log` | Log progress, decisions, blockers during work |

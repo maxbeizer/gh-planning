@@ -75,6 +75,32 @@ Show the current config (YAML by default).
 gh planning config show
 ```
 
+### `gh planning config use <profile>`
+
+Switch to a named config profile. Creates the profile if it doesn't exist.
+Your existing config is preserved as the "default" profile on first use.
+
+```bash
+gh planning config use work
+gh planning config use personal
+```
+
+### `gh planning config profiles`
+
+List all config profiles.
+
+```bash
+gh planning config profiles
+```
+
+### `gh planning config delete <profile>`
+
+Delete a config profile (cannot delete the active one).
+
+```bash
+gh planning config delete old-project
+```
+
 ### `gh planning status`
 
 Display project items grouped by status.
@@ -82,6 +108,21 @@ Display project items grouped by status.
 ```bash
 gh planning status --project 25 --owner maxbeizer
 gh planning status --assignee maxbeizer --stale 7d
+gh planning status --board               # kanban board view
+gh planning status --swimlanes           # board with assignee rows
+gh planning status --exclude Done,Closed  # hide statuses
+gh planning status --open                 # open project in browser (no fetch)
+```
+
+### `gh planning board`
+
+Kanban board view of your project. Excludes Done/Completed/Closed by default.
+
+```bash
+gh planning board
+gh planning board --swimlanes         # rows per assignee
+gh planning board --include-done      # show completed items too
+gh planning board --open              # open in browser
 ```
 
 ### `gh planning track "<title>"`
