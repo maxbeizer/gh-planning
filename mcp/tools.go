@@ -1,0 +1,510 @@
+package mcp
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
+
+type ToolDefinition struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	InputSchema map[string]interface{} `json:"inputSchema"`
+	Command     []string               `json:"-"`
+	Build       func(map[string]interface{}) ([]string, error) `json:"-"`
+}
+
+var tools = []ToolDefinition{
+	{
+		Name:        "planning.status",
+		Description: "Query project status and filters",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project":  intSchema("Project number"),
+			"owner":    stringSchema("Project owner"),
+			"stale":    stringSchema("Stale duration (e.g. 7d)"),
+			"assignee": stringSchema("Assignee filter"),
+		}),
+		Command: []string{"planning", "status"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "status"}, args, flagSpec{
+				"project":  flagInt("--project"),
+				"owner":    flagString("--owner"),
+				"stale":    flagString("--stale"),
+				"assignee": flagString("--assignee"),
+			})
+		},
+	},
+	{
+		Name:        "planning.standup",
+		Description: "Generate a standup report",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"since":   stringSchema("Lookback duration (e.g. 24h)"),
+			"team":    boolSchema("Include team members"),
+		}),
+		Command: []string{"planning", "standup"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "standup"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"since":   flagString("--since"),
+				"team":    flagBool("--team"),
+			})
+		},
+	},
+	{
+		Name:        "planning.catchup",
+		Description: "Summarize updates since your last session",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"since":   stringSchema("Duration or date"),
+		}),
+		Command: []string{"planning", "catch-up"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "catch-up"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"since":   flagString("--since"),
+			})
+		},
+	},
+	{
+		Name:        "planning.breakdown",
+		Description: "Break a large issue into smaller tasks",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue_number": stringSchema("Issue number or URL"),
+			"repo":         stringSchema("Repository (owner/repo)"),
+			"dry_run":      boolSchema("Preview without creating issues"),
+		}),
+		Command: []string{"planning", "breakdown"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue_number", "issue")
+			if issue == "" {
+				return nil, fmt.Errorf("issue_number is required")
+			}
+			cmdArgs := []string{"planning", "breakdown", issue}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo":    flagString("--repo"),
+				"dry_run": flagBool("--dry-run"),
+			})
+		},
+	},
+	{
+		Name:        "planning.track",
+		Description: "Create an issue and add it to the project",
+		InputSchema: objectSchema(map[string]interface{}{
+			"title":    stringSchema("Issue title"),
+			"repo":     stringSchema("Repository (owner/repo)"),
+			"project":  intSchema("Project number"),
+			"body":     stringSchema("Issue body"),
+			"label":    arraySchema("Label names", "string"),
+			"assignee": stringSchema("Assignee"),
+			"status":   stringSchema("Initial status"),
+		}, "title", "repo"),
+		Command: []string{"planning", "track"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			title := firstString(args, "title")
+			if title == "" {
+				return nil, fmt.Errorf("title is required")
+			}
+			cmdArgs := []string{"planning", "track", title}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo":     flagString("--repo"),
+				"project":  flagInt("--project"),
+				"body":     flagString("--body"),
+				"label":    flagRepeat("--label"),
+				"assignee": flagString("--assignee"),
+				"status":   flagString("--status"),
+			})
+		},
+	},
+	{
+		Name:        "planning.team",
+		Description: "Show team activity summary",
+		InputSchema: objectSchema(map[string]interface{}{
+			"team":  stringSchema("Comma-separated team members"),
+			"since": stringSchema("Lookback duration"),
+			"quiet": boolSchema("Only show inactive teammates"),
+		}),
+		Command: []string{"planning", "team"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "team"}, args, flagSpec{
+				"team":  flagString("--team"),
+				"since": flagString("--since"),
+				"quiet": flagBool("--quiet"),
+			})
+		},
+	},
+	{
+		Name:        "planning.prep",
+		Description: "Generate a 1-1 prep report",
+		InputSchema: objectSchema(map[string]interface{}{
+			"handle": stringSchema("GitHub handle"),
+			"since":  stringSchema("Lookback duration"),
+			"notes":  boolSchema("Open or create notes"),
+		}, "handle"),
+		Command: []string{"planning", "prep"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			handle := firstString(args, "handle")
+			if handle == "" {
+				return nil, fmt.Errorf("handle is required")
+			}
+			cmdArgs := []string{"planning", "prep", handle}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"since": flagString("--since"),
+				"notes": flagBool("--notes"),
+			})
+		},
+	},
+	{
+		Name:        "planning.pulse",
+		Description: "Show team health metrics",
+		InputSchema: objectSchema(map[string]interface{}{
+			"team":  stringSchema("Comma-separated team members"),
+			"since": stringSchema("Lookback duration"),
+		}),
+		Command: []string{"planning", "pulse"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "pulse"}, args, flagSpec{
+				"team":  flagString("--team"),
+				"since": flagString("--since"),
+			})
+		},
+	},
+	{
+		Name:        "planning.agentContext",
+		Description: "Summarize project context for an agent",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"issue":   stringSchema("Issue URL or number"),
+			"repo":    stringSchema("Repository (owner/repo)"),
+		}),
+		Command: []string{"planning", "agent-context"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "agent-context"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"issue":   flagString("--issue"),
+				"repo":    flagString("--repo"),
+			})
+		},
+	},
+	{
+		Name:        "planning.claim",
+		Description: "Claim an issue and move it to In Progress",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue":   stringSchema("Issue URL or number"),
+			"repo":    stringSchema("Repository (owner/repo)"),
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"session": stringSchema("Session ID"),
+		}, "issue"),
+		Command: []string{"planning", "claim"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue")
+			if issue == "" {
+				return nil, fmt.Errorf("issue is required")
+			}
+			cmdArgs := []string{"planning", "claim", issue}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo":    flagString("--repo"),
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"session": flagString("--session"),
+			})
+		},
+	},
+	{
+		Name:        "planning.complete",
+		Description: "Complete an issue and move it forward",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue":   stringSchema("Issue URL or number"),
+			"repo":    stringSchema("Repository (owner/repo)"),
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"done":    arraySchema("Completed work items", "string"),
+			"pr":      intSchema("Pull request number"),
+			"session": stringSchema("Session ID"),
+		}, "issue"),
+		Command: []string{"planning", "complete"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue")
+			if issue == "" {
+				return nil, fmt.Errorf("issue is required")
+			}
+			cmdArgs := []string{"planning", "complete", issue}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo":    flagString("--repo"),
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"done":    flagRepeat("--done"),
+				"pr":      flagInt("--pr"),
+				"session": flagString("--session"),
+			})
+		},
+	},
+	{
+		Name:        "planning.queue",
+		Description: "Show items ready for agent processing",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"status":  arraySchema("Status filters", "string"),
+			"label":   stringSchema("Label filter"),
+			"limit":   intSchema("Max items"),
+		}),
+		Command: []string{"planning", "queue"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "queue"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"status":  flagRepeat("--status"),
+				"label":   flagString("--label"),
+				"limit":   flagInt("--limit"),
+			})
+		},
+	},
+	{
+		Name:        "planning.review",
+		Description: "Summarize review status for a pull request",
+		InputSchema: objectSchema(map[string]interface{}{
+			"pr":   stringSchema("Pull request number"),
+			"repo": stringSchema("Repository (owner/repo)"),
+		}, "pr"),
+		Command: []string{"planning", "review"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			pr := firstString(args, "pr")
+			if pr == "" {
+				return nil, fmt.Errorf("pr is required")
+			}
+			cmdArgs := []string{"planning", "review", pr}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo": flagString("--repo"),
+			})
+		},
+	},
+	{
+		Name:        "planning.focus",
+		Description: "Set or show current focus",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue": stringSchema("Issue reference (owner/repo#number)"),
+		}),
+		Command: []string{"planning", "focus"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue")
+			cmdArgs := []string{"planning", "focus"}
+			if issue != "" {
+				cmdArgs = append(cmdArgs, issue)
+			}
+			return cmdArgs, nil
+		},
+	},
+	{
+		Name:        "planning.handoff",
+		Description: "Post a session handoff comment",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue":     stringSchema("Issue URL or number"),
+			"repo":      stringSchema("Repository (owner/repo)"),
+			"done":      arraySchema("Completed work items", "string"),
+			"remaining": arraySchema("Remaining work items", "string"),
+			"decision":  arraySchema("Decisions made", "string"),
+			"uncertain": arraySchema("Open questions", "string"),
+			"session":   stringSchema("Session ID"),
+		}, "issue"),
+		Command: []string{"planning", "handoff"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue")
+			if issue == "" {
+				return nil, fmt.Errorf("issue is required")
+			}
+			cmdArgs := []string{"planning", "handoff", issue}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo":      flagString("--repo"),
+				"done":      flagRepeat("--done"),
+				"remaining": flagRepeat("--remaining"),
+				"decision":  flagRepeat("--decision"),
+				"uncertain": flagRepeat("--uncertain"),
+				"session":   flagString("--session"),
+			})
+		},
+	},
+}
+
+func Tools() []ToolDefinition {
+	result := make([]ToolDefinition, len(tools))
+	copy(result, tools)
+	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
+	return result
+}
+
+func ToolByName(name string) (*ToolDefinition, bool) {
+	for _, tool := range tools {
+		if tool.Name == name {
+			return &tool, true
+		}
+	}
+	return nil, false
+}
+
+type flagSpec map[string]flagConfig
+
+type flagConfig struct {
+	Flag       string
+	Repeatable bool
+	Boolean    bool
+	Type       string
+}
+
+func flagString(flag string) flagConfig {
+	return flagConfig{Flag: flag, Type: "string"}
+}
+
+func flagInt(flag string) flagConfig {
+	return flagConfig{Flag: flag, Type: "int"}
+}
+
+func flagBool(flag string) flagConfig {
+	return flagConfig{Flag: flag, Boolean: true, Type: "bool"}
+}
+
+func flagRepeat(flag string) flagConfig {
+	return flagConfig{Flag: flag, Repeatable: true, Type: "string"}
+}
+
+func buildFlags(base []string, args map[string]interface{}, specs flagSpec) ([]string, error) {
+	cmdArgs := append([]string{}, base...)
+	for key, spec := range specs {
+		value, ok := args[key]
+		if !ok || value == nil {
+			continue
+		}
+		if spec.Boolean {
+			if boolVal, ok := boolValue(value); ok && boolVal {
+				cmdArgs = append(cmdArgs, spec.Flag)
+			}
+			continue
+		}
+		if spec.Repeatable {
+			items := sliceValue(value)
+			for _, item := range items {
+				strVal := strings.TrimSpace(fmt.Sprintf("%v", item))
+				if strVal == "" {
+					continue
+				}
+				cmdArgs = append(cmdArgs, spec.Flag, strVal)
+			}
+			continue
+		}
+		if spec.Type == "int" {
+			if intVal, ok := intValue(value); ok {
+				cmdArgs = append(cmdArgs, spec.Flag, fmt.Sprintf("%d", intVal))
+			}
+			continue
+		}
+		strVal := strings.TrimSpace(fmt.Sprintf("%v", value))
+		if strVal != "" {
+			cmdArgs = append(cmdArgs, spec.Flag, strVal)
+		}
+	}
+	return cmdArgs, nil
+}
+
+func boolValue(value interface{}) (bool, bool) {
+	switch v := value.(type) {
+	case bool:
+		return v, true
+	case string:
+		lower := strings.ToLower(strings.TrimSpace(v))
+		if lower == "true" {
+			return true, true
+		}
+		if lower == "false" {
+			return false, true
+		}
+	}
+	return false, false
+}
+
+func intValue(value interface{}) (int, bool) {
+	switch v := value.(type) {
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	case float64:
+		return int(v), true
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return 0, false
+		}
+		var parsed int
+		_, err := fmt.Sscanf(v, "%d", &parsed)
+		if err == nil {
+			return parsed, true
+		}
+	}
+	return 0, false
+}
+
+func sliceValue(value interface{}) []interface{} {
+	switch v := value.(type) {
+	case []interface{}:
+		return v
+	case []string:
+		items := make([]interface{}, 0, len(v))
+		for _, item := range v {
+			items = append(items, item)
+		}
+		return items
+	default:
+		return []interface{}{v}
+	}
+}
+
+func firstString(args map[string]interface{}, keys ...string) string {
+	for _, key := range keys {
+		if val, ok := args[key]; ok {
+			str := strings.TrimSpace(fmt.Sprintf("%v", val))
+			if str != "" {
+				return str
+			}
+		}
+	}
+	return ""
+}
+
+func objectSchema(properties map[string]interface{}, required ...string) map[string]interface{} {
+	schema := map[string]interface{}{
+		"type":       "object",
+		"properties": properties,
+	}
+	if len(required) > 0 {
+		schema["required"] = required
+	}
+	return schema
+}
+
+func stringSchema(description string) map[string]interface{} {
+	return map[string]interface{}{"type": "string", "description": description}
+}
+
+func intSchema(description string) map[string]interface{} {
+	return map[string]interface{}{"type": "integer", "description": description}
+}
+
+func boolSchema(description string) map[string]interface{} {
+	return map[string]interface{}{"type": "boolean", "description": description}
+}
+
+func arraySchema(description string, itemType string) map[string]interface{} {
+	return map[string]interface{}{
+		"type":        "array",
+		"description": description,
+		"items": map[string]interface{}{
+			"type": itemType,
+		},
+	}
+}

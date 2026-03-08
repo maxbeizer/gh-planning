@@ -200,6 +200,28 @@ gh planning pulse --since 30d
 gh planning pulse --team maxbeizer,claudia-bot
 ```
 
+## Copilot Integration
+
+Copilot skills live in `copilot-skills/` and map to `gh planning` commands.
+
+```bash
+gh planning copilot skills
+```
+
+To start the MCP server (JSON-RPC over stdio):
+
+```bash
+gh planning copilot serve
+```
+
+Test a natural language query to see which skill/command would be selected:
+
+```bash
+gh planning copilot test "Show me blocked items"
+```
+
+Native Copilot plugin registration is planned once the MCP format stabilizes.
+
 ## Global Flags
 
 All commands accept:

@@ -50,6 +50,7 @@ func init() {
 	rootCmd.AddCommand(completeCmd)
 	rootCmd.AddCommand(queueCmd)
 	rootCmd.AddCommand(reviewCmd)
+	rootCmd.AddCommand(copilotCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
