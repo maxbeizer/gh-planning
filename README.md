@@ -342,25 +342,43 @@ gh planning guide breakdown       # issue decomposition
 
 ## Copilot Integration
 
+gh-planning exposes 29 tools via MCP (Model Context Protocol) so Copilot can use them directly.
+
+### Setup for VS Code / Copilot
+
+Add to `.vscode/mcp.json` (or `~/.vscode/mcp.json` for global):
+
+```json
+{
+  "servers": {
+    "gh-planning": {
+      "command": "gh",
+      "args": ["planning", "copilot", "serve"]
+    }
+  }
+}
+```
+
+### Setup for Copilot CLI
+
+Add to `~/.config/github-copilot/config.yml`:
+
+```yaml
+mcp_servers:
+  gh-planning:
+    command: gh
+    args: ["planning", "copilot", "serve"]
+```
+
+### Commands
+
+```bash
+gh planning copilot serve          # start the MCP server
+gh planning copilot skills         # list available Copilot skills
+gh planning copilot test "query"   # test which skill matches a query
+```
+
 Copilot skills live in `copilot-skills/` and map to `gh planning` commands.
-
-```bash
-gh planning copilot skills
-```
-
-To start the MCP server (JSON-RPC over stdio):
-
-```bash
-gh planning copilot serve
-```
-
-Test a natural language query to see which skill/command would be selected:
-
-```bash
-gh planning copilot test "Show me blocked items"
-```
-
-Native Copilot plugin registration is planned once the MCP format stabilizes.
 
 ## Global Flags
 

@@ -380,6 +380,190 @@ var tools = []ToolDefinition{
 			})
 		},
 	},
+	{
+		Name:        "planning.board",
+		Description: "Show kanban board view of your project",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project":      intSchema("Project number"),
+			"owner":        stringSchema("Project owner"),
+			"swimlanes":    boolSchema("Show assignee swimlanes"),
+			"include_done": boolSchema("Include completed items"),
+		}),
+		Command: []string{"planning", "board"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "board"}, args, flagSpec{
+				"project":      flagInt("--project"),
+				"owner":        flagString("--owner"),
+				"swimlanes":    flagBool("--swimlanes"),
+				"include_done": flagBool("--include-done"),
+			})
+		},
+	},
+	{
+		Name:        "planning.estimate",
+		Description: "Add an effort estimate to an issue",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue": stringSchema("Issue URL or number"),
+			"repo":  stringSchema("Repository (owner/repo)"),
+			"size":  stringSchema("T-shirt size (XS, S, M, L, XL)"),
+		}, "issue"),
+		Command: []string{"planning", "estimate"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue")
+			if issue == "" {
+				return nil, fmt.Errorf("issue is required")
+			}
+			cmdArgs := []string{"planning", "estimate", issue}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"repo": flagString("--repo"),
+				"size": flagString("--size"),
+			})
+		},
+	},
+	{
+		Name:        "planning.blocked",
+		Description: "Mark an issue as blocked or show blocked items",
+		InputSchema: objectSchema(map[string]interface{}{
+			"issue":   stringSchema("Issue to mark as blocked"),
+			"by":      stringSchema("Blocking issue reference"),
+			"repo":    stringSchema("Repository (owner/repo)"),
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+		}),
+		Command: []string{"planning", "blocked"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			issue := firstString(args, "issue")
+			cmdArgs := []string{"planning", "blocked"}
+			if issue != "" {
+				cmdArgs = append(cmdArgs, issue)
+			}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"by":      flagString("--by"),
+				"repo":    flagString("--repo"),
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+			})
+		},
+	},
+	{
+		Name:        "planning.sprint",
+		Description: "Show sprint overview and progress",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+			"since":   stringSchema("Sprint start date or duration"),
+		}),
+		Command: []string{"planning", "sprint"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "sprint"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"since":   flagString("--since"),
+			})
+		},
+	},
+	{
+		Name:        "planning.roadmap",
+		Description: "Show project roadmap and timeline",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+		}),
+		Command: []string{"planning", "roadmap"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "roadmap"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+			})
+		},
+	},
+	{
+		Name:        "planning.prioritize",
+		Description: "Prioritize project items",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+		}),
+		Command: []string{"planning", "prioritize"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "prioritize"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+			})
+		},
+	},
+	{
+		Name:        "planning.criticalPath",
+		Description: "Show the critical path through blocked dependencies",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+		}),
+		Command: []string{"planning", "critical-path"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "critical-path"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+			})
+		},
+	},
+	{
+		Name:        "planning.profile.show",
+		Description: "Show current profile configuration",
+		InputSchema: objectSchema(map[string]interface{}{}),
+		Command:     []string{"planning", "profile", "show"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return []string{"planning", "profile", "show"}, nil
+		},
+	},
+	{
+		Name:        "planning.profile.list",
+		Description: "List all configuration profiles",
+		InputSchema: objectSchema(map[string]interface{}{}),
+		Command:     []string{"planning", "profile", "list"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return []string{"planning", "profile", "list"}, nil
+		},
+	},
+	{
+		Name:        "planning.profile.detect",
+		Description: "Show which profile matches the current repo",
+		InputSchema: objectSchema(map[string]interface{}{}),
+		Command:     []string{"planning", "profile", "detect"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return []string{"planning", "profile", "detect"}, nil
+		},
+	},
+	{
+		Name:        "planning.cheatsheet",
+		Description: "Show a quick-reference of gh-planning commands organized by scenario",
+		InputSchema: objectSchema(map[string]interface{}{}),
+		Command:     []string{"planning", "cheatsheet"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return []string{"planning", "cheatsheet", "--plain"}, nil
+		},
+	},
+	{
+		Name:        "planning.guide",
+		Description: "Show a workflow guide for a specific scenario",
+		InputSchema: objectSchema(map[string]interface{}{
+			"workflow": map[string]interface{}{
+				"type":        "string",
+				"description": "Workflow name",
+				"enum":        []string{"morning", "new-task", "one-on-one", "agent", "breakdown"},
+			},
+		}),
+		Command: []string{"planning", "guide"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			workflow := firstString(args, "workflow")
+			cmdArgs := []string{"planning", "guide"}
+			if workflow != "" {
+				cmdArgs = append(cmdArgs, workflow)
+			}
+			cmdArgs = append(cmdArgs, "--plain")
+			return cmdArgs, nil
+		},
+	},
 }
 
 func Tools() []ToolDefinition {

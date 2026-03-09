@@ -1,6 +1,34 @@
-# MCP Server (Scaffold)
+# MCP Server
 
-This folder provides a minimal MCP-style JSON-RPC server that exposes `gh planning` commands as tools. The MCP format is still evolving; this is a scaffold to make Copilot integration easy when native registration is available.
+This folder provides an MCP (Model Context Protocol) JSON-RPC server that exposes `gh planning` commands as tools for Copilot and other AI assistants.
+
+## Setup
+
+### VS Code / Copilot
+
+Add to your `.vscode/mcp.json` (or `~/.vscode/mcp.json` for global):
+
+```json
+{
+  "servers": {
+    "gh-planning": {
+      "command": "gh",
+      "args": ["planning", "copilot", "serve"]
+    }
+  }
+}
+```
+
+### Copilot CLI
+
+Add to `~/.config/github-copilot/config.yml`:
+
+```yaml
+mcp_servers:
+  gh-planning:
+    command: gh
+    args: ["planning", "copilot", "serve"]
+```
 
 ## Run the Server
 
@@ -10,45 +38,54 @@ gh planning copilot serve
 
 The server listens on stdin and writes JSON-RPC responses to stdout.
 
-## Copilot Registration (Future)
-
-When Copilot supports MCP server registration, point it at:
-
-```bash
-path/to/gh-planning copilot serve
-```
-
 ## Supported Methods
 
 - `initialize`
 - `tools/list`
 - `tools/call`
 
-## Tool Schemas
+## Available Tools (29)
 
-`tools/list` returns the following tools (each expects `arguments` matching the input schema):
+### Query & Views
+- `planning.status` — Project status and filters
+- `planning.board` — Kanban board view
+- `planning.sprint` — Sprint overview
+- `planning.roadmap` — Project roadmap and timeline
+- `planning.blocked` — Blocked items and dependencies
+- `planning.criticalPath` — Critical path through dependencies
+- `planning.prioritize` — Prioritize project items
 
-- `planning.status`
-- `planning.standup`
-- `planning.catchup`
-- `planning.breakdown`
-- `planning.track`
-- `planning.team`
-- `planning.prep`
-- `planning.pulse`
-- `planning.agentContext`
-- `planning.claim`
-- `planning.complete`
-- `planning.queue`
-- `planning.review`
-- `planning.focus`
-- `planning.handoff`
+### Reports
+- `planning.standup` — Generate standup report
+- `planning.catchup` — Summarize updates since last session
+- `planning.team` — Team activity summary
+- `planning.prep` — 1-1 prep report
+- `planning.pulse` — Team health metrics
 
-Each tool shells out to:
+### Work Lifecycle
+- `planning.track` — Create and track issues
+- `planning.claim` — Claim an issue
+- `planning.complete` — Complete an issue
+- `planning.focus` — Set or show focus
+- `planning.estimate` — Add effort estimates
+- `planning.review` — PR review summary
+- `planning.queue` — Agent work queue
+- `planning.breakdown` — Break down issues with AI
 
-```bash
-gh planning <command> --json
-```
+### Logging & Handoff
+- `planning.log` — Log progress
+- `planning.logs` — View log timeline
+- `planning.handoff` — Post session handoff
+- `planning.agentContext` — Agent context summary
+
+### Configuration
+- `planning.profile.show` — Show current profile
+- `planning.profile.list` — List profiles
+- `planning.profile.detect` — Detect profile from repo
+
+### Discovery
+- `planning.cheatsheet` — Command quick-reference
+- `planning.guide` — Workflow guides
 
 ## Example
 
