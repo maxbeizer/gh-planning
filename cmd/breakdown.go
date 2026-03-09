@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/maxbeizer/gh-planning/internal/config"
@@ -207,7 +205,7 @@ func createIssue(ctx context.Context, repo string, item github.BreakdownItem) (*
 	if issueURL == "" {
 		return nil, fmt.Errorf("issue create returned empty URL")
 	}
-	number, err := parseIssueNumberFromURL(issueURL)
+	_, number, err := parseIssueURL(issueURL)
 	if err != nil {
 		return nil, err
 	}
@@ -234,56 +232,5 @@ func addSubIssue(ctx context.Context, parentID string, subID string) error {
 }`
 	_, err := github.GraphQL(ctx, mutation, map[string]interface{}{"parent": parentID, "sub": subID})
 	return err
-}
-
-func resolveIssueInput(input string, repoOverride string) (string, int, error) {
-	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
-		u, err := url.Parse(input)
-		if err != nil {
-			return "", 0, err
-		}
-		parts := strings.Split(strings.Trim(u.Path, "/"), "/")
-		if len(parts) < 4 {
-			return "", 0, fmt.Errorf("invalid issue URL")
-		}
-		repo := fmt.Sprintf("%s/%s", parts[0], parts[1])
-		number, err := strconv.Atoi(parts[len(parts)-1])
-		if err != nil {
-			return "", 0, fmt.Errorf("invalid issue number")
-		}
-		return repo, number, nil
-	}
-	if strings.Contains(input, "#") {
-		repo, number, err := parseIssueRef(input)
-		return repo, number, err
-	}
-	number, err := strconv.Atoi(input)
-	if err != nil {
-		return "", 0, fmt.Errorf("invalid issue number")
-	}
-	if repoOverride == "" {
-		// Auto-detect from git remote
-		repoOverride = config.DetectGitRepo()
-	}
-	if repoOverride == "" {
-		return "", 0, fmt.Errorf("--repo is required when not in a git repository")
-	}
-	return repoOverride, number, nil
-}
-
-func parseIssueNumberFromURL(value string) (int, error) {
-	u, err := url.Parse(value)
-	if err != nil {
-		return 0, err
-	}
-	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
-	if len(parts) == 0 {
-		return 0, fmt.Errorf("invalid issue URL")
-	}
-	number, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil {
-		return 0, fmt.Errorf("invalid issue number")
-	}
-	return number, nil
 }
 

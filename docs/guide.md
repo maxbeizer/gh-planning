@@ -72,7 +72,7 @@ team's work.
 
 ```bash
 # Configure your team once
-gh planning config set team alice,bob,carol
+gh planning profile set team alice,bob,carol
 
 # See what everyone's been up to
 gh planning team --since 7d
@@ -181,7 +181,7 @@ gh planning init --project 25 --owner maxbeizer
 | Concept | What it means |
 |---------|---------------|
 | **Project** | A GitHub Projects (V2) board. You set a default with `init` or `setup`. |
-| **Profile** | A named config set. Switch between work/personal with `config use`. |
+| **Profile** | A named config set. Switch between work/personal with `profile use`. Profiles can auto-detect based on your repo. |
 | **Focus** | Your current working issue. One at a time. Tracked locally with elapsed time. |
 | **Team** | A list of GitHub usernames. Used by `standup --team`, `team`, `pulse`, and `prep`. |
 | **Queue** | Project items filtered by label/status — the "inbox" for agent work. |
@@ -193,8 +193,8 @@ gh planning init --project 25 --owner maxbeizer
 |---------|---------|
 | `setup` | Interactive first-time configuration walkthrough |
 | `init` | Set default project (non-interactive) |
-| `config set/show` | Read or write individual config values |
-| `config use/profiles/delete` | Switch between named config profiles |
+| `profile set/show` | Read or write individual profile values |
+| `profile use/list/delete` | Switch between named profiles |
 | `status` | Project board summary (list, `--board`, or `--swimlanes`) |
 | `board` | Kanban board view (excludes Done by default) |
 | `track` | Create an issue and add it to the project |

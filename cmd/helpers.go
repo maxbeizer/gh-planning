@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/maxbeizer/gh-planning/internal/config"
 )
 
 func parseDuration(value string) (time.Duration, error) {
@@ -83,4 +86,71 @@ if url != "" {
 return hyperlink(url, ref)
 }
 return ref
+}
+
+// resolveIssueInput parses an issue argument in one of three formats:
+//   - URL: https://github.com/owner/repo/issues/123
+//   - Full ref: owner/repo#123
+//   - Bare number: 123 (uses repoOverride, then git remote auto-detection)
+func resolveIssueInput(input string, repoOverride string) (string, int, error) {
+	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
+		return parseIssueURL(input)
+	}
+	if strings.Contains(input, "#") {
+		return parseIssueRef(input)
+	}
+	number, err := strconv.Atoi(input)
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid issue reference: %q (use owner/repo#number, a URL, or a plain number)", input)
+	}
+	if repoOverride == "" {
+		repoOverride = config.DetectGitRepo()
+	}
+	if repoOverride == "" {
+		return "", 0, fmt.Errorf("--repo is required when not in a git repository")
+	}
+	return repoOverride, number, nil
+}
+
+// parseIssueRef parses "owner/repo#number" or a bare number (auto-detects repo).
+func parseIssueRef(value string) (string, int, error) {
+	if strings.Contains(value, "#") {
+		parts := strings.SplitN(value, "#", 2)
+		if len(parts) != 2 || parts[0] == "" {
+			return "", 0, fmt.Errorf("issue must be in owner/repo#number format")
+		}
+		number, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return "", 0, fmt.Errorf("invalid issue number in %q", value)
+		}
+		return parts[0], number, nil
+	}
+
+	number, err := strconv.Atoi(value)
+	if err != nil {
+		return "", 0, fmt.Errorf("issue must be in owner/repo#number format or a plain number")
+	}
+	repo := config.DetectGitRepo()
+	if repo == "" {
+		return "", 0, fmt.Errorf("could not detect repo — use owner/repo#number format")
+	}
+	return repo, number, nil
+}
+
+// parseIssueURL extracts owner/repo and issue number from a GitHub issue URL.
+func parseIssueURL(rawURL string) (string, int, error) {
+	u, err := neturl.Parse(rawURL)
+	if err != nil {
+		return "", 0, err
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) < 4 {
+		return "", 0, fmt.Errorf("invalid issue URL")
+	}
+	repo := fmt.Sprintf("%s/%s", parts[0], parts[1])
+	number, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid issue number in URL")
+	}
+	return repo, number, nil
 }
