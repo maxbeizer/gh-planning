@@ -62,6 +62,9 @@ func init() {
 	rootCmd.AddCommand(unblockCmd)
 	rootCmd.AddCommand(criticalPathCmd)
 	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(cheatsheetCmd)
+	rootCmd.AddCommand(guideCmd)
+	rootCmd.AddCommand(tutorialCmd)
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
@@ -118,6 +121,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	fmt.Println("Run `gh planning --help` for all commands.")
 	if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
 		fmt.Println("Run `gh planning setup` to get started.")
+		fmt.Println("Run `gh planning tutorial` for an interactive walkthrough.")
+	} else {
+		fmt.Println("Run `gh planning cheatsheet` to browse commands by scenario.")
 	}
 	return nil
 }

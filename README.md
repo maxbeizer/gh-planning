@@ -27,6 +27,24 @@ gh planning track "Fix auth bug" --repo maxbeizer/app --status "In Progress"
 gh planning focus maxbeizer/app#42
 ```
 
+## Learning & Discovery
+
+```bash
+# Interactive tutorial — runs real commands, two modes
+gh planning tutorial --hands-on   # full lifecycle: create → claim → focus → log → complete
+gh planning tutorial --explore    # read-only tour of your existing project
+
+# Browsable cheatsheet — search commands by scenario
+gh planning cheatsheet
+
+# Workflow guides — step-by-step walkthroughs
+gh planning guide morning      # morning catch-up routine
+gh planning guide new-task     # full task lifecycle
+gh planning guide one-on-one   # 1-1 preparation
+gh planning guide agent        # AI agent workflow
+gh planning guide breakdown    # issue decomposition
+```
+
 ## Commands
 
 ### `gh planning`
@@ -273,6 +291,41 @@ Show team health metrics.
 ```bash
 gh planning pulse --since 30d
 gh planning pulse --team maxbeizer,claudia-bot
+```
+
+### `gh planning tutorial`
+
+Interactive tutorial that teaches gh-planning by doing. Runs real commands
+against your project. Progress is saved automatically — resume where you left off.
+
+```bash
+gh planning tutorial              # choose mode interactively
+gh planning tutorial --hands-on   # full lifecycle: create → claim → focus → log → complete
+gh planning tutorial --explore    # read-only tour of your board and reports
+gh planning tutorial --list       # see progress
+gh planning tutorial --reset      # start over
+```
+
+### `gh planning cheatsheet`
+
+Browsable quick-reference organized by scenario. Search and filter interactively.
+
+```bash
+gh planning cheatsheet            # interactive browser
+gh planning cheatsheet --plain    # static text output
+```
+
+### `gh planning guide <workflow>`
+
+Step-by-step workflow walkthroughs.
+
+```bash
+gh planning guide                 # list available workflows
+gh planning guide morning         # morning routine
+gh planning guide new-task        # full task lifecycle
+gh planning guide one-on-one      # 1-1 preparation
+gh planning guide agent           # AI agent workflow
+gh planning guide breakdown       # issue decomposition
 ```
 
 ## Copilot Integration
