@@ -16,7 +16,7 @@ type ToolDefinition struct {
 
 var tools = []ToolDefinition{
 	{
-		Name:        "planning.status",
+		Name:        "planning-status",
 		Description: "Query project status and filters",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project":   intSchema("Project number"),
@@ -41,7 +41,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.standup",
+		Name:        "planning-standup",
 		Description: "Generate a standup report",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -60,7 +60,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.catchup",
+		Name:        "planning-catchup",
 		Description: "Summarize updates since your last session",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -77,7 +77,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.breakdown",
+		Name:        "planning-breakdown",
 		Description: "Break a large issue into smaller tasks",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue_number": stringSchema("Issue number or URL"),
@@ -98,7 +98,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.track",
+		Name:        "planning-track",
 		Description: "Create an issue and add it to the project",
 		InputSchema: objectSchema(map[string]interface{}{
 			"title":    stringSchema("Issue title"),
@@ -127,7 +127,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.team",
+		Name:        "planning-team",
 		Description: "Show team activity summary",
 		InputSchema: objectSchema(map[string]interface{}{
 			"team":  stringSchema("Comma-separated team members"),
@@ -144,7 +144,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.prep",
+		Name:        "planning-prep",
 		Description: "Generate a 1-1 prep report",
 		InputSchema: objectSchema(map[string]interface{}{
 			"handle": stringSchema("GitHub handle"),
@@ -165,7 +165,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.pulse",
+		Name:        "planning-pulse",
 		Description: "Show team health metrics",
 		InputSchema: objectSchema(map[string]interface{}{
 			"team":  stringSchema("Comma-separated team members"),
@@ -180,7 +180,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.agentContext",
+		Name:        "planning-agentContext",
 		Description: "Summarize project context for an agent",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project":    intSchema("Project number"),
@@ -201,7 +201,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.claim",
+		Name:        "planning-claim",
 		Description: "Claim an issue and move it to In Progress",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue":   stringSchema("Issue URL or number"),
@@ -226,7 +226,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.complete",
+		Name:        "planning-complete",
 		Description: "Complete an issue and move it forward",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue":   stringSchema("Issue URL or number"),
@@ -255,7 +255,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.queue",
+		Name:        "planning-queue",
 		Description: "Show items ready for agent processing",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -276,7 +276,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.review",
+		Name:        "planning-review",
 		Description: "Summarize review status for a pull request",
 		InputSchema: objectSchema(map[string]interface{}{
 			"pr":   stringSchema("Pull request number"),
@@ -295,7 +295,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.focus",
+		Name:        "planning-focus",
 		Description: "Set or show current focus",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue": stringSchema("Issue reference (owner/repo#number)"),
@@ -311,7 +311,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.handoff",
+		Name:        "planning-handoff",
 		Description: "Post a session handoff comment",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue":     stringSchema("Issue URL or number"),
@@ -340,7 +340,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.log",
+		Name:        "planning-log",
 		Description: "Log progress on current focus issue",
 		InputSchema: objectSchema(map[string]interface{}{
 			"message": stringSchema("Log message"),
@@ -366,7 +366,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.logs",
+		Name:        "planning-logs",
 		Description: "View progress log timeline",
 		InputSchema: objectSchema(map[string]interface{}{
 			"all":   boolSchema("Show all log entries"),
@@ -381,7 +381,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.board",
+		Name:        "planning-board",
 		Description: "Show kanban board view of your project",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project":      intSchema("Project number"),
@@ -400,7 +400,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.estimate",
+		Name:        "planning-estimate",
 		Description: "Add an effort estimate to an issue",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue": stringSchema("Issue URL or number"),
@@ -421,7 +421,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.blocked",
+		Name:        "planning-blocked",
 		Description: "Mark an issue as blocked or show blocked items",
 		InputSchema: objectSchema(map[string]interface{}{
 			"issue":   stringSchema("Issue to mark as blocked"),
@@ -446,7 +446,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.sprint",
+		Name:        "planning-sprint",
 		Description: "Show sprint overview and progress",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -463,7 +463,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.roadmap",
+		Name:        "planning-roadmap",
 		Description: "Show project roadmap and timeline",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -478,7 +478,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.prioritize",
+		Name:        "planning-prioritize",
 		Description: "Prioritize project items",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -493,7 +493,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.criticalPath",
+		Name:        "planning-criticalPath",
 		Description: "Show the critical path through blocked dependencies",
 		InputSchema: objectSchema(map[string]interface{}{
 			"project": intSchema("Project number"),
@@ -508,7 +508,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.profile.show",
+		Name:        "planning-profile-show",
 		Description: "Show current profile configuration",
 		InputSchema: objectSchema(map[string]interface{}{}),
 		Command:     []string{"planning", "profile", "show"},
@@ -517,7 +517,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.profile.list",
+		Name:        "planning-profile-list",
 		Description: "List all configuration profiles",
 		InputSchema: objectSchema(map[string]interface{}{}),
 		Command:     []string{"planning", "profile", "list"},
@@ -526,7 +526,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.profile.detect",
+		Name:        "planning-profile-detect",
 		Description: "Show which profile matches the current repo",
 		InputSchema: objectSchema(map[string]interface{}{}),
 		Command:     []string{"planning", "profile", "detect"},
@@ -535,7 +535,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.cheatsheet",
+		Name:        "planning-cheatsheet",
 		Description: "Show a quick-reference of gh-planning commands organized by scenario",
 		InputSchema: objectSchema(map[string]interface{}{}),
 		Command:     []string{"planning", "cheatsheet"},
@@ -544,7 +544,7 @@ var tools = []ToolDefinition{
 		},
 	},
 	{
-		Name:        "planning.guide",
+		Name:        "planning-guide",
 		Description: "Show a workflow guide for a specific scenario",
 		InputSchema: objectSchema(map[string]interface{}{
 			"workflow": map[string]interface{}{

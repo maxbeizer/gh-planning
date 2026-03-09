@@ -188,7 +188,7 @@ func ExampleRequest() string {
 		"id":      1,
 		"method":  "tools/call",
 		"params": map[string]interface{}{
-			"name": "planning.status",
+			"name": "planning-status",
 			"arguments": map[string]interface{}{
 				"project": 25,
 				"owner":   "maxbeizer",

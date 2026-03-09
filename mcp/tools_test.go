@@ -24,9 +24,9 @@ func TestToolsSorted(t *testing.T) {
 }
 
 func TestToolByName_Found(t *testing.T) {
-	tool, ok := ToolByName("planning.status")
+	tool, ok := ToolByName("planning-status")
 	if !ok {
-		t.Fatal("planning.status not found")
+		t.Fatal("planning-status not found")
 	}
 	if tool.Description == "" {
 		t.Error("expected non-empty description")
@@ -34,7 +34,7 @@ func TestToolByName_Found(t *testing.T) {
 }
 
 func TestToolByName_NotFound(t *testing.T) {
-	_, ok := ToolByName("planning.nonexistent")
+	_, ok := ToolByName("planning-nonexistent")
 	if ok {
 		t.Error("expected not found for nonexistent tool")
 	}
@@ -42,34 +42,34 @@ func TestToolByName_NotFound(t *testing.T) {
 
 func TestToolNames(t *testing.T) {
 	expected := []string{
-		"planning.agentContext",
-		"planning.blocked",
-		"planning.board",
-		"planning.breakdown",
-		"planning.catchup",
-		"planning.cheatsheet",
-		"planning.claim",
-		"planning.complete",
-		"planning.criticalPath",
-		"planning.estimate",
-		"planning.focus",
-		"planning.guide",
-		"planning.handoff",
-		"planning.log",
-		"planning.logs",
-		"planning.prioritize",
-		"planning.profile.detect",
-		"planning.profile.list",
-		"planning.profile.show",
-		"planning.pulse",
-		"planning.queue",
-		"planning.review",
-		"planning.roadmap",
-		"planning.sprint",
-		"planning.standup",
-		"planning.status",
-		"planning.team",
-		"planning.track",
+		"planning-agentContext",
+		"planning-blocked",
+		"planning-board",
+		"planning-breakdown",
+		"planning-catchup",
+		"planning-cheatsheet",
+		"planning-claim",
+		"planning-complete",
+		"planning-criticalPath",
+		"planning-estimate",
+		"planning-focus",
+		"planning-guide",
+		"planning-handoff",
+		"planning-log",
+		"planning-logs",
+		"planning-prioritize",
+		"planning-profile-detect",
+		"planning-profile-list",
+		"planning-profile-show",
+		"planning-pulse",
+		"planning-queue",
+		"planning-review",
+		"planning-roadmap",
+		"planning-sprint",
+		"planning-standup",
+		"planning-status",
+		"planning-team",
+		"planning-track",
 	}
 	tools := Tools()
 	names := make(map[string]bool)
@@ -84,9 +84,9 @@ func TestToolNames(t *testing.T) {
 }
 
 func TestBuildFlags_StatusTool(t *testing.T) {
-	tool, ok := ToolByName("planning.status")
+	tool, ok := ToolByName("planning-status")
 	if !ok {
-		t.Fatal("planning.status not found")
+		t.Fatal("planning-status not found")
 	}
 	args, err := tool.Build(map[string]interface{}{
 		"project": float64(25),
@@ -109,9 +109,9 @@ func TestBuildFlags_StatusTool(t *testing.T) {
 }
 
 func TestBuildFlags_TrackTool(t *testing.T) {
-	tool, ok := ToolByName("planning.track")
+	tool, ok := ToolByName("planning-track")
 	if !ok {
-		t.Fatal("planning.track not found")
+		t.Fatal("planning-track not found")
 	}
 	args, err := tool.Build(map[string]interface{}{
 		"title": "Fix auth bug",
@@ -126,9 +126,9 @@ func TestBuildFlags_TrackTool(t *testing.T) {
 }
 
 func TestBuildFlags_TrackRequiresTitle(t *testing.T) {
-	tool, ok := ToolByName("planning.track")
+	tool, ok := ToolByName("planning-track")
 	if !ok {
-		t.Fatal("planning.track not found")
+		t.Fatal("planning-track not found")
 	}
 	_, err := tool.Build(map[string]interface{}{
 		"repo": "maxbeizer/app",
@@ -139,9 +139,9 @@ func TestBuildFlags_TrackRequiresTitle(t *testing.T) {
 }
 
 func TestBuildFlags_CheatsheetUsesPlain(t *testing.T) {
-	tool, ok := ToolByName("planning.cheatsheet")
+	tool, ok := ToolByName("planning-cheatsheet")
 	if !ok {
-		t.Fatal("planning.cheatsheet not found")
+		t.Fatal("planning-cheatsheet not found")
 	}
 	args, err := tool.Build(map[string]interface{}{})
 	if err != nil {
@@ -154,9 +154,9 @@ func TestBuildFlags_CheatsheetUsesPlain(t *testing.T) {
 }
 
 func TestBuildFlags_GuideWithWorkflow(t *testing.T) {
-	tool, ok := ToolByName("planning.guide")
+	tool, ok := ToolByName("planning-guide")
 	if !ok {
-		t.Fatal("planning.guide not found")
+		t.Fatal("planning-guide not found")
 	}
 	args, err := tool.Build(map[string]interface{}{
 		"workflow": "morning",
@@ -234,7 +234,7 @@ func TestServerToolsList(t *testing.T) {
 }
 
 func TestServerToolNotFound(t *testing.T) {
-	req := `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"planning.fake","arguments":{}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"planning-fake","arguments":{}}}` + "\n"
 	in := strings.NewReader(req)
 	var out bytes.Buffer
 
