@@ -135,13 +135,30 @@ func (s *Server) handleRequest(req *rpcRequest) *rpcResponse {
 		cmdArgs = append(cmdArgs, "--json")
 		output, execErr := runCommand(cmdArgs)
 		if execErr != nil {
-			return rpcErrorResponse(req.ID, -32000, "Command failed", string(output))
+			// Return error as content so the client can display it
+			return &rpcResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result: map[string]interface{}{
+					"content": []map[string]interface{}{
+						{"type": "text", "text": string(output)},
+					},
+					"isError": true,
+				},
+			}
 		}
-		result := parseOutput(output)
+		text := strings.TrimSpace(string(output))
+		if text == "" {
+			text = "(no output)"
+		}
 		return &rpcResponse{
 			JSONRPC: "2.0",
 			ID:      req.ID,
-			Result:  result,
+			Result: map[string]interface{}{
+				"content": []map[string]interface{}{
+					{"type": "text", "text": text},
+				},
+			},
 		}
 	default:
 		// Silently ignore notifications (e.g., notifications/initialized)
