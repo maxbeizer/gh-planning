@@ -564,6 +564,35 @@ var tools = []ToolDefinition{
 			return cmdArgs, nil
 		},
 	},
+	{
+		Name:        "planning-profile-create",
+		Description: "Create a new gh-planning profile for a project. Use this when a user is in a repo that has no matching profile, or when they want to set up gh-planning for a new project. Detects the current repo automatically.",
+		InputSchema: objectSchema(map[string]interface{}{
+			"name":    stringSchema("Profile name (e.g., work, personal, my-project)"),
+			"project": intSchema("GitHub Projects V2 project number"),
+			"owner":   stringSchema("Project owner (GitHub user or org)"),
+			"repos":   stringSchema("Comma-separated repos to auto-detect this profile (e.g., github/github,github/*)"),
+			"orgs":    stringSchema("Comma-separated orgs for auto-detection"),
+			"team":    stringSchema("Comma-separated team member GitHub usernames"),
+			"use":     boolSchema("Switch to the new profile after creating it"),
+		}, "name"),
+		Command: []string{"planning", "profile", "create"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			name := firstString(args, "name")
+			if name == "" {
+				return nil, fmt.Errorf("name is required")
+			}
+			cmdArgs := []string{"planning", "profile", "create", name}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"repos":   flagString("--repos"),
+				"orgs":    flagString("--orgs"),
+				"team":    flagString("--team"),
+				"use":     flagBool("--use"),
+			})
+		},
+	},
 }
 
 func Tools() []ToolDefinition {

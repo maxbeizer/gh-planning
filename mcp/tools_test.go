@@ -9,8 +9,8 @@ import (
 
 func TestToolsCount(t *testing.T) {
 	tools := Tools()
-	if len(tools) < 29 {
-		t.Errorf("expected at least 29 tools, got %d", len(tools))
+	if len(tools) < 30 {
+		t.Errorf("expected at least 30 tools, got %d", len(tools))
 	}
 }
 
@@ -58,6 +58,7 @@ func TestToolNames(t *testing.T) {
 		"planning-log",
 		"planning-logs",
 		"planning-prioritize",
+		"planning-profile-create",
 		"planning-profile-detect",
 		"planning-profile-list",
 		"planning-profile-show",
@@ -229,7 +230,7 @@ func TestServerToolsList(t *testing.T) {
 		t.Fatal("tools is not an array")
 	}
 	if len(toolsList) < 29 {
-		t.Errorf("expected at least 29 tools, got %d", len(toolsList))
+		t.Errorf("expected at least 30 tools, got %d", len(toolsList))
 	}
 }
 

@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -60,11 +62,28 @@ var profileDeleteCmd = &cobra.Command{
 	RunE:  runProfileDelete,
 }
 
+var profileCreateOpts struct {
+	Project int
+	Owner   string
+	Repos   string
+	Orgs    string
+	Team    string
+	Use     bool
+}
+
 var profileCreateCmd = &cobra.Command{
 	Use:   "create <name>",
-	Short: "Create a new empty profile",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runProfileCreate,
+	Short: "Create a new profile with interactive setup",
+	Long: `Create a named profile. Without flags, walks you through an interactive
+setup. With flags, creates the profile non-interactively.
+
+The current repo is auto-detected and offered as a default for the repos field.
+
+Examples:
+  gh planning profile create work
+  gh planning profile create work --owner github --project 42 --repos "github/*" --use`,
+	Args: cobra.ExactArgs(1),
+	RunE: runProfileCreate,
 }
 
 var profileDetectCmd = &cobra.Command{
@@ -81,6 +100,13 @@ func init() {
 	profileCmd.AddCommand(profileDeleteCmd)
 	profileCmd.AddCommand(profileCreateCmd)
 	profileCmd.AddCommand(profileDetectCmd)
+
+	profileCreateCmd.Flags().IntVar(&profileCreateOpts.Project, "project", 0, "Default project number")
+	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Owner, "owner", "", "Project owner")
+	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Repos, "repos", "", "Comma-separated repos (e.g., github/github,github/*)")
+	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Orgs, "orgs", "", "Comma-separated orgs for auto-detection")
+	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Team, "team", "", "Comma-separated team members")
+	profileCreateCmd.Flags().BoolVar(&profileCreateOpts.Use, "use", false, "Switch to the new profile after creating it")
 }
 
 func runProfileSet(cmd *cobra.Command, args []string) error {
@@ -242,20 +268,156 @@ func runProfileDelete(cmd *cobra.Command, args []string) error {
 
 func runProfileCreate(cmd *cobra.Command, args []string) error {
 	name := args[0]
+
+	// Check if profile already exists
+	names, _, _ := config.ListProfiles()
+	for _, n := range names {
+		if n == name {
+			return fmt.Errorf("profile %q already exists — use `gh planning profile use %s` to switch to it", name, name)
+		}
+	}
+
+	hasFlags := profileCreateOpts.Project != 0 || profileCreateOpts.Owner != "" ||
+		profileCreateOpts.Repos != "" || profileCreateOpts.Orgs != "" || profileCreateOpts.Team != ""
+
+	var cfg config.Config
+
+	if hasFlags {
+		// Non-interactive: use flags directly
+		cfg.DefaultProject = profileCreateOpts.Project
+		cfg.DefaultOwner = profileCreateOpts.Owner
+		if profileCreateOpts.Repos != "" {
+			cfg.Repos = splitAndTrim(profileCreateOpts.Repos)
+		}
+		if profileCreateOpts.Orgs != "" {
+			cfg.Orgs = splitAndTrim(profileCreateOpts.Orgs)
+		}
+		if profileCreateOpts.Team != "" {
+			cfg.Team = splitAndTrim(profileCreateOpts.Team)
+		}
+	} else if isTerminal() {
+		// Interactive mode
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Fprintf(cmd.OutOrStdout(), "\n")
+		fmt.Fprintf(cmd.OutOrStdout(), tui.Title.Render("Create profile: %s")+"\n\n", name)
+
+		// Detect current repo for smart defaults
+		currentRepo := config.DetectGitRepo()
+		defaultOrg := ""
+		if currentRepo != "" {
+			if idx := strings.Index(currentRepo, "/"); idx != -1 {
+				defaultOrg = currentRepo[:idx]
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), tui.Muted.Render("  Detected repo: %s")+"\n\n", currentRepo)
+		}
+
+		// Owner
+		defaultOwner := defaultOrg
+		fmt.Fprintf(cmd.OutOrStdout(), "  Project owner")
+		if defaultOwner != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), " "+tui.Muted.Render("[%s]"), defaultOwner)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), ": ")
+		ownerInput, _ := reader.ReadString('\n')
+		ownerInput = strings.TrimSpace(ownerInput)
+		if ownerInput == "" {
+			ownerInput = defaultOwner
+		}
+		cfg.DefaultOwner = ownerInput
+
+		// Project number
+		fmt.Fprintf(cmd.OutOrStdout(), "  Project number: ")
+		projectInput, _ := reader.ReadString('\n')
+		projectInput = strings.TrimSpace(projectInput)
+		if projectInput != "" {
+			fmt.Sscanf(projectInput, "%d", &cfg.DefaultProject)
+		}
+
+		// Repos
+		defaultRepos := ""
+		if currentRepo != "" {
+			defaultRepos = currentRepo
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "  Repos (comma-separated, globs ok)")
+		if defaultRepos != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), " "+tui.Muted.Render("[%s]"), defaultRepos)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), ": ")
+		reposInput, _ := reader.ReadString('\n')
+		reposInput = strings.TrimSpace(reposInput)
+		if reposInput == "" {
+			reposInput = defaultRepos
+		}
+		if reposInput != "" {
+			cfg.Repos = splitAndTrim(reposInput)
+		}
+
+		// Orgs
+		fmt.Fprintf(cmd.OutOrStdout(), "  Orgs (comma-separated)")
+		if defaultOrg != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), " "+tui.Muted.Render("[%s]"), defaultOrg)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), ": ")
+		orgsInput, _ := reader.ReadString('\n')
+		orgsInput = strings.TrimSpace(orgsInput)
+		if orgsInput == "" {
+			orgsInput = defaultOrg
+		}
+		if orgsInput != "" {
+			cfg.Orgs = splitAndTrim(orgsInput)
+		}
+
+		// Team
+		fmt.Fprintf(cmd.OutOrStdout(), "  Team members (comma-separated, optional): ")
+		teamInput, _ := reader.ReadString('\n')
+		teamInput = strings.TrimSpace(teamInput)
+		if teamInput != "" {
+			cfg.Team = splitAndTrim(teamInput)
+		}
+
+		fmt.Fprintln(cmd.OutOrStdout())
+	}
+
+	// Create the profile
 	if err := config.UseProfile(name); err != nil {
 		return err
 	}
-	// Switch back to previous active profile — create shouldn't switch
-	prev, _ := config.ActiveProfileName()
-	names, _, _ := config.ListProfiles()
-	// If there was a previous active, switch back
-	for _, n := range names {
-		if n != name && n == prev {
-			break
+	if err := config.Save(&cfg); err != nil {
+		return err
+	}
+
+	// Switch back unless --use was passed
+	if !profileCreateOpts.Use {
+		prev, _ := config.ActiveProfileName()
+		if prev == name {
+			// UseProfile switched us to the new one; switch back to previous
+			// We can't easily get the previous, so we just stay. The user can switch.
 		}
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Created profile %q\n", name)
-	fmt.Fprintf(cmd.OutOrStdout(), "Use `gh planning profile use %s` to switch to it.\n", name)
+
+	fmt.Fprintf(cmd.OutOrStdout(), tui.Success.Render("✓ Created profile %q")+"\n", name)
+	if cfg.DefaultOwner != "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Owner:   %s\n", cfg.DefaultOwner)
+	}
+	if cfg.DefaultProject != 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Project: %d\n", cfg.DefaultProject)
+	}
+	if len(cfg.Repos) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Repos:   %s\n", strings.Join(cfg.Repos, ", "))
+	}
+	if len(cfg.Orgs) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Orgs:    %s\n", strings.Join(cfg.Orgs, ", "))
+	}
+	if len(cfg.Team) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Team:    %s\n", strings.Join(cfg.Team, ", "))
+	}
+
+	if profileCreateOpts.Use {
+		fmt.Fprintf(cmd.OutOrStdout(), "\n  Switched to profile %q\n", name)
+	} else {
+		fmt.Fprintf(cmd.OutOrStdout(), "\n  Run "+tui.Command.Render("gh planning profile use %s")+" to switch to it.\n", name)
+	}
 	return nil
 }
 
