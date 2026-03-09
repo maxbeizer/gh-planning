@@ -67,6 +67,10 @@ func (s *Server) Run() error {
 		if resp == nil {
 			continue
 		}
+		// JSON-RPC notifications (no id) don't get responses
+		if req.ID == nil {
+			continue
+		}
 		if err := enc.Encode(resp); err != nil {
 			return err
 		}
@@ -80,15 +84,13 @@ func (s *Server) handleRequest(req *rpcRequest) *rpcResponse {
 			JSONRPC: "2.0",
 			ID:      req.ID,
 			Result: map[string]interface{}{
+				"protocolVersion": "2024-11-05",
 				"serverInfo": map[string]interface{}{
 					"name":    "gh-planning",
-					"version": "mcp-scaffold",
+					"version": "0.1.0",
 				},
 				"capabilities": map[string]interface{}{
-					"tools": map[string]interface{}{
-						"list": true,
-						"call": true,
-					},
+					"tools": map[string]interface{}{},
 				},
 			},
 		}
@@ -142,6 +144,10 @@ func (s *Server) handleRequest(req *rpcRequest) *rpcResponse {
 			Result:  result,
 		}
 	default:
+		// Silently ignore notifications (e.g., notifications/initialized)
+		if strings.HasPrefix(req.Method, "notifications/") {
+			return nil
+		}
 		return rpcErrorResponse(req.ID, -32601, "Method not found", req.Method)
 	}
 }
