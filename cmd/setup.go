@@ -153,6 +153,48 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println()
 
+	// Step 6: Repos mapping (for auto-detection)
+	fmt.Println("─── Step 6: Repository Mapping (optional) ───")
+	fmt.Println("List repos that should auto-activate this profile (e.g., github/github).")
+	fmt.Println("Supports globs like myorg/* to match all repos under an org.")
+	fmt.Println("Comma-separated, or leave blank to skip.")
+	fmt.Printf("Repos: ")
+	reposInput, err := readLine(reader)
+	if err != nil {
+		return err
+	}
+	var repos []string
+	if reposInput != "" {
+		for _, r := range strings.Split(reposInput, ",") {
+			r = strings.TrimSpace(r)
+			if r != "" {
+				repos = append(repos, r)
+			}
+		}
+	}
+	fmt.Println()
+
+	// Step 7: Org mapping
+	fmt.Println("─── Step 7: Org Mapping (optional) ───")
+	fmt.Println("List GitHub orgs that should auto-activate this profile.")
+	fmt.Println("Any repo under these orgs will match (lower priority than explicit repos).")
+	fmt.Println("Comma-separated, or leave blank to skip.")
+	fmt.Printf("Orgs: ")
+	orgsInput, err := readLine(reader)
+	if err != nil {
+		return err
+	}
+	var orgs []string
+	if orgsInput != "" {
+		for _, o := range strings.Split(orgsInput, ",") {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				orgs = append(orgs, o)
+			}
+		}
+	}
+	fmt.Println()
+
 	// Switch to profile if requested
 	if setupOpts.Profile != "" {
 		if err := config.UseProfile(setupOpts.Profile); err != nil {
@@ -176,6 +218,12 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	if agentMax > 0 {
 		cfg.AgentMaxPerHour = agentMax
 	}
+	if len(repos) > 0 {
+		cfg.Repos = repos
+	}
+	if len(orgs) > 0 {
+		cfg.Orgs = orgs
+	}
 	if err := config.Save(cfg); err != nil {
 		return err
 	}
@@ -197,6 +245,12 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	}
 	if agentMax > 0 {
 		fmt.Printf("  Agent:   %d/hour\n", agentMax)
+	}
+	if len(repos) > 0 {
+		fmt.Printf("  Repos:   %s\n", strings.Join(repos, ", "))
+	}
+	if len(orgs) > 0 {
+		fmt.Printf("  Orgs:    %s\n", strings.Join(orgs, ", "))
 	}
 	fmt.Println()
 	fmt.Printf("Config saved to %s\n", cfgPath)

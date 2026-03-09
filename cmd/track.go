@@ -49,7 +49,10 @@ func runTrack(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("project owner and number are required (run `gh planning init`) ")
 	}
 	if trackOpts.Repo == "" {
-		return fmt.Errorf("--repo is required")
+		trackOpts.Repo = config.DetectGitRepo()
+	}
+	if trackOpts.Repo == "" {
+		return fmt.Errorf("--repo is required when not in a git repository")
 	}
 	title := args[0]
 	argsCreate := []string{"issue", "create", "--repo", trackOpts.Repo, "--title", title, "--json", "id,number,url,repository"}

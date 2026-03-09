@@ -68,9 +68,9 @@ Initialize config and verify the project exists.
 gh planning init --project 25 --owner maxbeizer
 ```
 
-### `gh planning config set <key> <value>`
+### `gh planning profile set <key> <value>`
 
-Set configuration values.
+Set profile values. (`config` is an alias for `profile`.)
 
 Supported keys:
 - `default-project`
@@ -78,45 +78,57 @@ Supported keys:
 - `team` (comma-separated GitHub usernames)
 - `1-1-repo-pattern` (example: `maxbeizer/{handle}-1-1`)
 - `agent.max-per-hour`
+- `repos` (comma-separated, e.g., `github/github,github/gh-planning` — supports globs like `myorg/*`)
+- `orgs` (comma-separated GitHub orgs for auto-detection)
 
 Example:
 
 ```bash
-gh planning config set team maxbeizer,claudia-bot
+gh planning profile set team maxbeizer,claudia-bot
+gh planning profile set repos github/github,github/gh-*
+gh planning profile set orgs github
 ```
 
-### `gh planning config show`
+### `gh planning profile show`
 
-Show the current config (YAML by default).
+Show the current profile (YAML by default). Shows auto-detected profile if applicable.
 
 ```bash
-gh planning config show
+gh planning profile show
 ```
 
-### `gh planning config use <profile>`
+### `gh planning profile use <profile>`
 
-Switch to a named config profile. Creates the profile if it doesn't exist.
+Switch to a named profile. Creates the profile if it doesn't exist.
 Your existing config is preserved as the "default" profile on first use.
 
 ```bash
-gh planning config use work
-gh planning config use personal
+gh planning profile use work
+gh planning profile use personal
 ```
 
-### `gh planning config profiles`
+### `gh planning profile list`
 
-List all config profiles.
+List all profiles. Marks active and auto-detected profiles.
 
 ```bash
-gh planning config profiles
+gh planning profile list
 ```
 
-### `gh planning config delete <profile>`
+### `gh planning profile detect`
 
-Delete a config profile (cannot delete the active one).
+Show which profile matches the current repo based on `repos` and `orgs` fields.
 
 ```bash
-gh planning config delete old-project
+gh planning profile detect
+```
+
+### `gh planning profile delete <profile>`
+
+Delete a profile (cannot delete the active one).
+
+```bash
+gh planning profile delete old-project
 ```
 
 ### `gh planning status`

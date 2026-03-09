@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/session"
 	"github.com/spf13/cobra"
@@ -50,8 +51,10 @@ func runFocus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	// Normalize to full ref format for display and persistence
+	fullRef := fmt.Sprintf("%s#%d", repo, number)
 	sess := &session.FocusSession{
-		Issue:       issueRef,
+		Issue:       fullRef,
 		IssueNumber: number,
 		Repo:        repo,
 		StartedAt:   time.Now().UTC(),
@@ -91,17 +94,31 @@ func runUnfocus(cmd *cobra.Command, args []string) error {
 }
 
 func parseIssueRef(value string) (string, int, error) {
-	parts := strings.Split(value, "#")
-	if len(parts) != 2 {
-		return "", 0, fmt.Errorf("issue must be in owner/repo#number format")
+	// Try owner/repo#number format first
+	if strings.Contains(value, "#") {
+		parts := strings.Split(value, "#")
+		if len(parts) != 2 {
+			return "", 0, fmt.Errorf("issue must be in owner/repo#number format")
+		}
+		repo := parts[0]
+		number, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return "", 0, fmt.Errorf("invalid issue number")
+		}
+		if repo == "" {
+			return "", 0, fmt.Errorf("repo required")
+		}
+		return repo, number, nil
 	}
-	repo := parts[0]
-	number, err := strconv.Atoi(parts[1])
+
+	// Try bare number with auto-detection
+	number, err := strconv.Atoi(value)
 	if err != nil {
-		return "", 0, fmt.Errorf("invalid issue number")
+		return "", 0, fmt.Errorf("issue must be in owner/repo#number format or a plain number")
 	}
+	repo := config.DetectGitRepo()
 	if repo == "" {
-		return "", 0, fmt.Errorf("repo required")
+		return "", 0, fmt.Errorf("could not detect repo — use owner/repo#number format")
 	}
 	return repo, number, nil
 }

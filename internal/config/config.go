@@ -15,6 +15,8 @@ type Config struct {
 	Team                []string `yaml:"team,omitempty" json:"team,omitempty"`
 	OneOnOneRepoPattern string   `yaml:"1-1-repo-pattern,omitempty" json:"oneOnOneRepoPattern,omitempty"`
 	AgentMaxPerHour     int      `yaml:"agent.max-per-hour,omitempty" json:"agentMaxPerHour,omitempty"`
+	Repos               []string `yaml:"repos,omitempty" json:"repos,omitempty"`
+	Orgs                []string `yaml:"orgs,omitempty" json:"orgs,omitempty"`
 }
 
 // configFile is the on-disk structure that supports named profiles.
@@ -85,6 +87,8 @@ func saveFile(cf *configFile) error {
 
 // Load returns the active profile's config. If no profiles exist, it
 // falls back to legacy top-level fields for backward compatibility.
+// When profiles have repos/orgs fields, Load auto-detects the best
+// profile based on the current directory's git remote.
 func Load() (*Config, error) {
 	cf, err := loadFile()
 	if err != nil {
@@ -94,6 +98,16 @@ func Load() (*Config, error) {
 		cfg := cf.Config
 		return &cfg, nil
 	}
+
+	// Try auto-detection from current repo
+	matches, _ := DetectProfile()
+	if len(matches) == 1 {
+		profile := cf.Profiles[matches[0].Name]
+		return &profile, nil
+	}
+	// Multiple matches are handled by the caller (TUI selector);
+	// fall through to active profile.
+
 	name := cf.ActiveProfile
 	if name == "" {
 		name = "default"
@@ -194,7 +208,7 @@ func DeleteProfile(name string) error {
 		active = "default"
 	}
 	if name == active {
-		return fmt.Errorf("cannot delete the active profile %q; switch first with `config use`", name)
+		return fmt.Errorf("cannot delete the active profile %q; switch first with `profile use`", name)
 	}
 	if _, ok := cf.Profiles[name]; !ok {
 		return fmt.Errorf("profile %q not found", name)

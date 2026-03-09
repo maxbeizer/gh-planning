@@ -262,7 +262,11 @@ func resolveIssueInput(input string, repoOverride string) (string, int, error) {
 		return "", 0, fmt.Errorf("invalid issue number")
 	}
 	if repoOverride == "" {
-		return "", 0, fmt.Errorf("--repo is required when using an issue number")
+		// Auto-detect from git remote
+		repoOverride = config.DetectGitRepo()
+	}
+	if repoOverride == "" {
+		return "", 0, fmt.Errorf("--repo is required when not in a git repository")
 	}
 	return repoOverride, number, nil
 }

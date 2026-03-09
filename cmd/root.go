@@ -32,7 +32,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&rootOpts.JQ, "jq", "", "Filter JSON output with jq")
 
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(profileCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(boardCmd)
 	rootCmd.AddCommand(trackCmd)
