@@ -1,0 +1,25 @@
+version = 1
+source-of-truth = "docs/SOURCE_OF_TRUTH.md"
+
+[project]
+  board = 28
+  owner = "maxbeizer"
+
+[agent]
+  hubber = "maxbeizer"
+  model = "gpt-4o"
+  max-per-hour = 0
+
+[notifications]
+  channel = "slack"
+  ops-channel = "#maxbeizer-ops"
+  webhook-url = ""
+
+[filters]
+  status = ""
+  labels = []
+
+[codespace]
+  enabled = false
+  machine = ""
+  idle-timeout = ""
