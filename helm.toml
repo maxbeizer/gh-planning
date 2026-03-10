@@ -8,7 +8,7 @@ source-of-truth = "docs/SOURCE_OF_TRUTH.md"
 [agent]
   hubber = "maxbeizer"
   model = "gpt-4o"
-  max-per-hour = 0
+  max-per-hour = 3
 
 [notifications]
   channel = "slack"
@@ -16,8 +16,8 @@ source-of-truth = "docs/SOURCE_OF_TRUTH.md"
   webhook-url = ""
 
 [filters]
-  status = ""
-  labels = []
+  status = "Ready"
+  labels = ["agent-ready"]
 
 [codespace]
   enabled = false
