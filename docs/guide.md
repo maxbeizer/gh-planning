@@ -1,6 +1,6 @@
 # How gh-planning Works
 
-A plain-English guide to what `gh planning` does and why you'd use it.
+A plain-English guide to what `gh planning` does and why you'd use it. For a full list of commands and flags, see the [Command Reference](commands.md).
 
 ## The Problem
 
