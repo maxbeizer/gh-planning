@@ -12,6 +12,12 @@ Your project board, in your terminal.
 
 **Team visibility without meetings.** Generate standup reports, catch-up summaries, 1-1 prep docs, and team health metrics from real GitHub activity. No more "what did you work on?" — the data is already there.
 
+## Documentation
+
+- **[Guide](docs/guide.md)** — narrative walkthrough of a typical day
+- **[Command Reference](docs/commands.md)** — complete reference for all commands
+- **[Agent Instructions](docs/agent-instructions.md)** — setup for AI coding agents
+
 ## Quick Start
 
 ```bash
@@ -33,14 +39,14 @@ gh planning standup
 
 ## What can it do?
 
-| Category | Commands | |
-|---|---|---|
-| **Personal workflow** | `status` `board` `track` `focus` `unfocus` `log` `breakdown` | View your board, track issues, focus on work, log progress |
-| **Reports** | `standup` `catch-up` `review` | Generate standups, catch-up summaries, PR reviews |
-| **Team** | `team` `prep` `pulse` | Team activity, 1-1 prep docs, health metrics |
-| **Agent coordination** | `agent-context` `claim` `complete` `handoff` `queue` | AI agent lifecycle — claim work, hand off context |
-| **Learning** | `tutorial` `cheatsheet` `guide` | Interactive tutorials, searchable cheatsheet, workflow guides |
-| **Configuration** | `setup` `profile` | Interactive setup, named profiles with auto-detection |
+| Category               | Commands                                                     |                                                               |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Personal workflow**  | `status` `board` `track` `focus` `unfocus` `log` `breakdown` | View your board, track issues, focus on work, log progress    |
+| **Reports**            | `standup` `catch-up` `review`                                | Generate standups, catch-up summaries, PR reviews             |
+| **Team**               | `team` `prep` `pulse`                                        | Team activity, 1-1 prep docs, health metrics                  |
+| **Agent coordination** | `agent-context` `claim` `complete` `handoff` `queue`         | AI agent lifecycle — claim work, hand off context             |
+| **Learning**           | `tutorial` `cheatsheet` `guide`                              | Interactive tutorials, searchable cheatsheet, workflow guides |
+| **Configuration**      | `setup` `profile`                                            | Interactive setup, named profiles with auto-detection         |
 
 All commands support `--json` and `--jq` flags for scripting.
 
@@ -73,12 +79,6 @@ mcp_servers:
 ```
 
 See the [Agent Instructions](docs/agent-instructions.md) for more on agent workflows.
-
-## Documentation
-
-- **[Guide](docs/guide.md)** — narrative walkthrough of a typical day
-- **[Command Reference](docs/commands.md)** — complete reference for all commands
-- **[Agent Instructions](docs/agent-instructions.md)** — setup for AI coding agents
 
 ## Development
 
