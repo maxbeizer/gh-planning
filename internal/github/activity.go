@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -27,50 +28,45 @@ func FetchActivity(ctx context.Context, user string, since time.Time) (Activity,
 	queryDate := since.Format(time.RFC3339)
 	activity := Activity{User: user, Since: since}
 
-	var err error
-	activity.PRsMerged, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:merged merged:>%s", user, queryDate))
-	if err != nil {
-		return activity, err
+	// Each entry maps a search query to where its result is stored.
+	type search struct {
+		query string
+		dest  *[]SearchIssue
 	}
-	activity.PRsOpened, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:pr created:>%s", user, queryDate))
-	if err != nil {
-		return activity, err
+	searches := []search{
+		{fmt.Sprintf("author:%s type:pr is:merged merged:>%s", user, queryDate), &activity.PRsMerged},
+		{fmt.Sprintf("author:%s type:pr created:>%s", user, queryDate), &activity.PRsOpened},
+		{fmt.Sprintf("author:%s type:issue created:>%s", user, queryDate), &activity.IssuesOpened},
+		{fmt.Sprintf("author:%s type:issue is:closed closed:>%s", user, queryDate), &activity.IssuesClosed},
+		{fmt.Sprintf("reviewed-by:%s type:pr updated:>%s", user, queryDate), &activity.Reviews},
+		{fmt.Sprintf("author:%s type:pr is:open", user), &activity.PRsOpen},
+		{fmt.Sprintf("author:%s type:pr is:open review:required", user), &activity.PRsInReview},
+		{fmt.Sprintf("author:%s type:pr is:open draft:true", user), &activity.PRsDraft},
+		{fmt.Sprintf("review-requested:%s type:pr is:open", user), &activity.ReviewRequests},
+		{fmt.Sprintf("assignee:%s type:issue is:open sort:updated", user), &activity.AssignedIssues},
+		{fmt.Sprintf("assignee:%s is:open label:blocked", user), &activity.Blocked},
 	}
-	activity.IssuesOpened, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:issue created:>%s", user, queryDate))
-	if err != nil {
-		return activity, err
+
+	var wg sync.WaitGroup
+	errs := make([]error, len(searches))
+	for i, s := range searches {
+		wg.Add(1)
+		go func(idx int, query string, dest *[]SearchIssue) {
+			defer wg.Done()
+			items, err := SearchIssues(ctx, query)
+			if err != nil {
+				errs[idx] = err
+				return
+			}
+			*dest = items
+		}(i, s.query, s.dest)
 	}
-	activity.IssuesClosed, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:issue is:closed closed:>%s", user, queryDate))
-	if err != nil {
-		return activity, err
-	}
-	activity.Reviews, err = SearchIssues(ctx, fmt.Sprintf("reviewed-by:%s type:pr updated:>%s", user, queryDate))
-	if err != nil {
-		return activity, err
-	}
-	activity.PRsOpen, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:open", user))
-	if err != nil {
-		return activity, err
-	}
-	activity.PRsInReview, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:open review:required", user))
-	if err != nil {
-		return activity, err
-	}
-	activity.PRsDraft, err = SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:open draft:true", user))
-	if err != nil {
-		return activity, err
-	}
-	activity.ReviewRequests, err = SearchIssues(ctx, fmt.Sprintf("review-requested:%s type:pr is:open", user))
-	if err != nil {
-		return activity, err
-	}
-	activity.AssignedIssues, err = SearchIssues(ctx, fmt.Sprintf("assignee:%s type:issue is:open sort:updated", user))
-	if err != nil {
-		return activity, err
-	}
-	activity.Blocked, err = SearchIssues(ctx, fmt.Sprintf("assignee:%s is:open label:blocked", user))
-	if err != nil {
-		return activity, err
+	wg.Wait()
+
+	for _, err := range errs {
+		if err != nil {
+			return activity, err
+		}
 	}
 
 	activity.LastActivity = latestActivityTime(activity)
