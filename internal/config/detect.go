@@ -127,3 +127,12 @@ func repoOrg(repo string) string {
 	}
 	return repo
 }
+
+// gitRepoRoot returns the top-level directory of the current git repository.
+func gitRepoRoot() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
