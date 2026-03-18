@@ -93,38 +93,38 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, rootOpts)
 	}
 
-	fmt.Println("gh-planning — developer command center")
-	fmt.Println()
+	fmt.Fprintln(cmd.OutOrStdout(), "gh-planning — developer command center")
+	fmt.Fprintln(cmd.OutOrStdout())
 
 	if focus != nil {
-		fmt.Printf("🎯 Focus: %s (%s)\n", focus.Issue, humanizeDuration(focus.Elapsed()))
+		fmt.Fprintf(cmd.OutOrStdout(), "🎯 Focus: %s (%s)\n", focus.Issue, humanizeDuration(focus.Elapsed()))
 	} else {
-		fmt.Println("🎯 Focus: none")
+		fmt.Fprintln(cmd.OutOrStdout(), "🎯 Focus: none")
 	}
 	if statusSummary != "" {
-		fmt.Printf("📊 %s\n", statusSummary)
+		fmt.Fprintf(cmd.OutOrStdout(), "📊 %s\n", statusSummary)
 	} else if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
-		fmt.Println("📊 No project configured")
+		fmt.Fprintln(cmd.OutOrStdout(), "📊 No project configured")
 	}
 
-	fmt.Println()
+	fmt.Fprintln(cmd.OutOrStdout())
 	if focus != nil {
-		fmt.Println("  gh planning log \"message\"    — log progress")
-		fmt.Println("  gh planning handoff <issue>  — hand off to next session")
-		fmt.Println("  gh planning complete <issue> — mark done")
+		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning log \"message\"    — log progress")
+		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning handoff <issue>  — hand off to next session")
+		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning complete <issue> — mark done")
 	} else {
-		fmt.Println("  gh planning status           — view your project board")
-		fmt.Println("  gh planning focus <issue>    — start focusing on an issue")
-		fmt.Println("  gh planning queue            — find work to pick up")
+		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning status           — view your project board")
+		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning focus <issue>    — start focusing on an issue")
+		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning queue            — find work to pick up")
 	}
-	fmt.Println("  gh planning standup          — generate a standup report")
-	fmt.Println()
-	fmt.Println("Run `gh planning --help` for all commands.")
+	fmt.Fprintln(cmd.OutOrStdout(), "  gh planning standup          — generate a standup report")
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning --help` for all commands.")
 	if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
-		fmt.Println("Run `gh planning setup` to get started.")
-		fmt.Println("Run `gh planning tutorial` for an interactive walkthrough.")
+		fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning setup` to get started.")
+		fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning tutorial` for an interactive walkthrough.")
 	} else {
-		fmt.Println("Run `gh planning cheatsheet` to browse commands by scenario.")
+		fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning cheatsheet` to browse commands by scenario.")
 	}
 	return nil
 }

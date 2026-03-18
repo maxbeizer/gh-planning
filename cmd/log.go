@@ -90,7 +90,7 @@ func runLog(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(entry, OutputOptions())
 	}
 
-	fmt.Printf("%s [%s] %s (%s)\n", prefix, kind, message, focus.Issue)
+	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s] %s (%s)\n", prefix, kind, message, focus.Issue)
 	return nil
 }
 
@@ -144,20 +144,21 @@ func runLogs(cmd *cobra.Command, args []string) error {
 
 	if len(entries) == 0 {
 		if issue != "" {
-			fmt.Printf("No logs for %s\n", issue)
+			fmt.Fprintf(cmd.OutOrStdout(), "No logs for %s\n", issue)
 		} else {
-			fmt.Println("No logs found")
+			fmt.Fprintln(cmd.OutOrStdout(), "No logs found")
 		}
 		return nil
 	}
 
+	w := cmd.OutOrStdout()
 	for _, entry := range entries {
 		prefix := kindPrefix(entry.Kind)
 		age := humanizeDuration(time.Since(entry.Time))
 		if logsOpts.All {
-			fmt.Printf("%s %s [%s] %s (%s)\n", prefix, entry.Issue, entry.Kind, entry.Message, age)
+			fmt.Fprintf(w, "%s %s [%s] %s (%s)\n", prefix, entry.Issue, entry.Kind, entry.Message, age)
 		} else {
-			fmt.Printf("%s [%s] %s (%s)\n", prefix, entry.Kind, entry.Message, age)
+			fmt.Fprintf(w, "%s [%s] %s (%s)\n", prefix, entry.Kind, entry.Message, age)
 		}
 	}
 	return nil

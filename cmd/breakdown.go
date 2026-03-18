@@ -77,11 +77,11 @@ func runBreakdown(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("🔨 Breakdown: #%d \"%s\" → %d sub-issues\n\n", number, issue.Title, len(items))
+	fmt.Fprintf(cmd.OutOrStdout(), "🔨 Breakdown: #%d \"%s\" → %d sub-issues\n\n", number, issue.Title, len(items))
 	printBreakdownItems(items)
-	fmt.Println()
+	fmt.Fprintln(cmd.OutOrStdout())
 	if breakdownOpts.DryRun {
-		fmt.Println("Create these sub-issues? [y/N]")
+		fmt.Fprintln(cmd.OutOrStdout(), "Create these sub-issues? [y/N]")
 		return nil
 	}
 
@@ -89,7 +89,7 @@ func runBreakdown(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Created %d sub-issues.\n", len(created))
+	fmt.Fprintf(cmd.OutOrStdout(), "Created %d sub-issues.\n", len(created))
 	return nil
 }
 
