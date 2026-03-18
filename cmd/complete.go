@@ -99,7 +99,19 @@ func runComplete(cmd *cobra.Command, args []string) error {
 	}
 	itemID, err := findProjectItemID(cmd.Context(), owner, project, repo, number)
 	if err != nil {
-		return err
+		// Item not in project — try to auto-add it
+		contentNum := number
+		if completeOpts.PR != 0 {
+			contentNum = completeOpts.PR
+		}
+		contentID, contentErr := github.GetContentID(cmd.Context(), issueOwner, issueRepo, contentNum)
+		if contentErr != nil {
+			return fmt.Errorf("item not in project and could not look up content ID: %w", contentErr)
+		}
+		itemID, err = github.AddItemToProject(cmd.Context(), projectID, contentID)
+		if err != nil {
+			return fmt.Errorf("failed to add item to project: %w", err)
+		}
 	}
 	if err := github.UpdateItemStatus(cmd.Context(), projectID, itemID, statusFieldID, optionID); err != nil {
 		return err

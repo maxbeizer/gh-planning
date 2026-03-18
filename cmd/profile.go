@@ -532,6 +532,38 @@ func runProfileDetect(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(matches) == 0 {
+		// Check for helm.toml as a fallback context source
+		helmCfg, helmErr := config.LoadHelmToml()
+		if helmErr == nil && helmCfg != nil && helmCfg.Project.Board > 0 {
+			currentRepo := config.DetectGitRepo()
+			owner := helmCfg.Project.Owner
+			if owner == "" && currentRepo != "" {
+				if idx := strings.Index(currentRepo, "/"); idx != -1 {
+					owner = currentRepo[:idx]
+				}
+			}
+
+			if OutputOptions().JSON || OutputOptions().JQ != "" {
+				return output.PrintJSON(map[string]interface{}{
+					"matches":    []string{},
+					"helmDetect": true,
+					"project":    helmCfg.Project.Board,
+					"owner":      owner,
+					"repo":       currentRepo,
+				}, OutputOptions())
+			}
+
+			fmt.Fprintln(cmd.OutOrStdout(), "No profiles match the current repo.")
+			fmt.Fprintf(cmd.OutOrStdout(), "\n  Found "+tui.Command.Render("helm.toml")+" with project %d (owner: %s)\n\n", helmCfg.Project.Board, owner)
+			reposFlag := ""
+			if currentRepo != "" {
+				reposFlag = fmt.Sprintf(" --repos %q", currentRepo)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "  Create a profile:\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "    gh planning profile create <name> --project %d --owner %s%s --use\n", helmCfg.Project.Board, owner, reposFlag)
+			return nil
+		}
+
 		fmt.Fprintln(cmd.OutOrStdout(), "No profiles match the current repo.")
 		fmt.Fprintln(cmd.OutOrStdout(), "Add repos/orgs to a profile: `gh planning profile set repos owner/repo`")
 		return nil
