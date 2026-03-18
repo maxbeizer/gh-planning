@@ -495,16 +495,10 @@ var tools = []ToolDefinition{
 	{
 		Name:        "planning-criticalPath",
 		Description: "Show the critical path through blocked dependencies",
-		InputSchema: objectSchema(map[string]interface{}{
-			"project": intSchema("Project number"),
-			"owner":   stringSchema("Project owner"),
-		}),
-		Command: []string{"planning", "critical-path"},
+		InputSchema: objectSchema(map[string]interface{}{}),
+		Command:     []string{"planning", "critical-path"},
 		Build: func(args map[string]interface{}) ([]string, error) {
-			return buildFlags([]string{"planning", "critical-path"}, args, flagSpec{
-				"project": flagInt("--project"),
-				"owner":   flagString("--owner"),
-			})
+			return []string{"planning", "critical-path"}, nil
 		},
 	},
 	{
