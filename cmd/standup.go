@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -52,20 +51,9 @@ func init() {
 }
 
 func runStandup(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(standupOpts.Owner, standupOpts.Project)
 	if err != nil {
 		return err
-	}
-	owner := standupOpts.Owner
-	project := standupOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	sinceDuration, err := parseDuration(standupOpts.Since)
@@ -79,7 +67,7 @@ func runStandup(cmd *cobra.Command, args []string) error {
 
 	users := []string{}
 	if standupOpts.Team {
-		users = append(users, cfg.Team...)
+		users = append(users, pc.Cfg.Team...)
 		if len(users) == 0 {
 			return fmt.Errorf("no team configured")
 		}
@@ -91,7 +79,7 @@ func runStandup(cmd *cobra.Command, args []string) error {
 		users = append(users, current)
 	}
 
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
+	projectData, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -115,14 +103,14 @@ func runStandup(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("📋 Standup — %s\n\n", time.Now().Format("Mon Jan 2, 2006"))
+	fmt.Fprintf(cmd.OutOrStdout(), "📋 Standup — %s\n\n", time.Now().Format("Mon Jan 2, 2006"))
 	for idx, report := range results {
 		if standupOpts.Team {
-			fmt.Printf("👤 @%s\n\n", report.User)
+			fmt.Fprintf(cmd.OutOrStdout(), "👤 @%s\n\n", report.User)
 		}
 		printStandupReport(report, sinceDuration)
 		if idx < len(results)-1 {
-			fmt.Println()
+			fmt.Fprintln(cmd.OutOrStdout())
 		}
 	}
 

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/state"
@@ -42,20 +41,9 @@ func runComplete(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(completeOpts.Owner, completeOpts.Project)
 	if err != nil {
 		return err
-	}
-	owner := completeOpts.Owner
-	project := completeOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	sessionID := completeOpts.Session
@@ -72,7 +60,7 @@ func runComplete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	projectID, _, statusFieldID, statusOptions, err := github.GetProjectInfo(cmd.Context(), owner, project)
+	projectID, _, statusFieldID, statusOptions, err := github.GetProjectInfo(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -97,7 +85,7 @@ func runComplete(cmd *cobra.Command, args []string) error {
 	if optionID == "" {
 		return fmt.Errorf("no suitable status option found for completion")
 	}
-	itemID, err := findProjectItemID(cmd.Context(), owner, project, repo, number)
+	itemID, err := findProjectItemID(cmd.Context(), pc.Owner, pc.Project, repo, number)
 	if err != nil {
 		// Item not in project — try to auto-add it
 		contentNum := number
@@ -147,7 +135,7 @@ func runComplete(cmd *cobra.Command, args []string) error {
 	}
 
 	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
-	fmt.Printf("Completed %s%s (moved to %s)\n", repo, issueRef(number, issueURL), statusLabel)
+	fmt.Fprintf(cmd.OutOrStdout(), "Completed %s%s (moved to %s)\n", repo, issueRef(number, issueURL), statusLabel)
 	return nil
 }
 

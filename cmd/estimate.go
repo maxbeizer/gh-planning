@@ -74,22 +74,22 @@ func runEstimate(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("📐 Estimate: #%d \"%s\"\n\n", number, issue.Title)
-	fmt.Printf("  Size:       %s\n", result.Size)
-	fmt.Printf("  Confidence: %s\n", result.Confidence)
-	fmt.Printf("  Reasoning:  %s\n", result.Reasoning)
+	fmt.Fprintf(cmd.OutOrStdout(), "📐 Estimate: #%d \"%s\"\n\n", number, issue.Title)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Size:       %s\n", result.Size)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Confidence: %s\n", result.Confidence)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Reasoning:  %s\n", result.Reasoning)
 
 	if len(result.Similar) > 0 {
-		fmt.Println()
-		fmt.Println("  Similar closed issues:")
+		fmt.Fprintln(cmd.OutOrStdout())
+		fmt.Fprintln(cmd.OutOrStdout(), "  Similar closed issues:")
 		for _, s := range result.Similar {
-			fmt.Printf("    #%-5d %s (size: %s)\n", s.Number, s.Title, s.Size)
+			fmt.Fprintf(cmd.OutOrStdout(), "    #%-5d %s (size: %s)\n", s.Number, s.Title, s.Size)
 		}
 	}
 
 	if estimateOpts.DryRun {
-		fmt.Println()
-		fmt.Println("  (dry-run: no changes made)")
+		fmt.Fprintln(cmd.OutOrStdout())
+		fmt.Fprintln(cmd.OutOrStdout(), "  (dry-run: no changes made)")
 	}
 
 	return nil

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -52,21 +51,9 @@ type roadmapOutput struct {
 }
 
 func runRoadmap(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(roadmapOpts.Owner, roadmapOpts.Project)
 	if err != nil {
 		return err
-	}
-
-	owner := roadmapOpts.Owner
-	project := roadmapOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	lookback, err := parseDuration(roadmapOpts.Since)
@@ -74,7 +61,7 @@ func runRoadmap(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --since value: %w", err)
 	}
 
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
+	projectData, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -85,8 +72,8 @@ func runRoadmap(cmd *cobra.Command, args []string) error {
 
 	data := roadmapOutput{
 		Title:   projectData.Title,
-		Owner:   owner,
-		Project: project,
+		Owner:   pc.Owner,
+		Project: pc.Project,
 		Buckets: buckets,
 	}
 

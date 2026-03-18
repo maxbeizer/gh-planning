@@ -39,7 +39,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 	project := initOpts.Project
 	if project == 0 {
-		fmt.Print("Project number: ")
+		fmt.Fprint(cmd.OutOrStdout(), "Project number: ")
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
@@ -64,6 +64,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err := config.Save(cfg); err != nil {
 		return err
 	}
-	fmt.Printf("Saved config: owner=%s project=%d\n", owner, project)
+	fmt.Fprintf(cmd.OutOrStdout(), "Saved config: owner=%s project=%d\n", owner, project)
 	return nil
 }

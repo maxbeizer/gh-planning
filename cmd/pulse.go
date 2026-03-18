@@ -128,18 +128,19 @@ func runPulse(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("💓 Team Pulse — last %s\n\n", pulseOpts.Since)
-	fmt.Printf("%-12s %-7s %-11s %-11s %-7s\n", "", "PRs/wk", "Cycle Time", "Review Time", "Blocked")
+	w := cmd.OutOrStdout()
+	fmt.Fprintf(w, "💓 Team Pulse — last %s\n\n", pulseOpts.Since)
+	fmt.Fprintf(w, "%-12s %-7s %-11s %-11s %-7s\n", "", "PRs/wk", "Cycle Time", "Review Time", "Blocked")
 	for _, member := range members {
 		flag := ""
 		if member.Flagged {
 			flag = " ⚠️"
 		}
-		fmt.Printf("@%-11s %-7.1f %-11s %-11s %-7d%s\n", member.User, member.PRsPerWeek, formatDays(member.CycleTimeDays), formatHours(member.ReviewTimeHours), member.Blocked, flag)
+		fmt.Fprintf(w, "@%-11s %-7.1f %-11s %-11s %-7d%s\n", member.User, member.PRsPerWeek, formatDays(member.CycleTimeDays), formatHours(member.ReviewTimeHours), member.Blocked, flag)
 	}
 
-	fmt.Println()
-	fmt.Printf("📊 Team Average: %.1f PRs/wk, %s cycle, %s reviews\n", summary.TeamAveragePRsPerWeek, formatDays(summary.TeamAverageCycleTimeDays), formatHours(summary.TeamAverageReviewTimeHours))
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "📊 Team Average: %.1f PRs/wk, %s cycle, %s reviews\n", summary.TeamAveragePRsPerWeek, formatDays(summary.TeamAverageCycleTimeDays), formatHours(summary.TeamAverageReviewTimeHours))
 	flags := []string{}
 	for _, member := range members {
 		if member.Flagged {
@@ -154,7 +155,7 @@ func runPulse(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if len(flags) > 0 {
-		fmt.Printf("🚩 Flags: %s\n", strings.Join(flags, "; "))
+		fmt.Fprintf(w, "🚩 Flags: %s\n", strings.Join(flags, "; "))
 	}
 	return nil
 }

@@ -106,12 +106,13 @@ func runReview(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("🔍 Review: PR #%d \"%s\" (%s)\n\n", number, pr.Title, repo)
-	fmt.Printf("📊 Stats: +%d -%d across %d files\n", pr.Additions, pr.Deletions, len(pr.Files))
+	w := cmd.OutOrStdout()
+	fmt.Fprintf(w, "🔍 Review: PR #%d \"%s\" (%s)\n\n", number, pr.Title, repo)
+	fmt.Fprintf(w, "📊 Stats: +%d -%d across %d files\n", pr.Additions, pr.Deletions, len(pr.Files))
 	if len(pr.StatusCheckRollup) == 0 {
-		fmt.Println("✅ CI: no checks")
+		fmt.Fprintln(w, "✅ CI: no checks")
 	} else if summary.ChecksPassing {
-		fmt.Println("✅ CI: All checks passing")
+		fmt.Fprintln(w, "✅ CI: All checks passing")
 	} else {
 		parts := []string{}
 		if summary.ChecksFailing > 0 {
@@ -123,16 +124,16 @@ func runReview(cmd *cobra.Command, args []string) error {
 		if len(parts) == 0 {
 			parts = append(parts, "checks running")
 		}
-		fmt.Printf("⚠️ CI: %s\n", strings.Join(parts, ", "))
+		fmt.Fprintf(w, "⚠️ CI: %s\n", strings.Join(parts, ", "))
 	}
-	fmt.Printf("👥 Reviews: %d approved, %d changes requested\n", summary.Approvals, summary.ChangesRequested)
+	fmt.Fprintf(w, "👥 Reviews: %d approved, %d changes requested\n", summary.Approvals, summary.ChangesRequested)
 	conflicts := "none"
 	if strings.EqualFold(pr.Mergeable, "CONFLICTING") {
 		conflicts = "merge conflicts"
 	}
-	fmt.Printf("⚠️ Conflicts: %s\n", conflicts)
+	fmt.Fprintf(w, "⚠️ Conflicts: %s\n", conflicts)
 	if len(summary.KeyFiles) > 0 {
-		fmt.Printf("📁 Key files: %s\n", strings.Join(summary.KeyFiles, ", "))
+		fmt.Fprintf(w, "📁 Key files: %s\n", strings.Join(summary.KeyFiles, ", "))
 	}
 	return nil
 }

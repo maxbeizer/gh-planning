@@ -131,10 +131,10 @@ func runPrep(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println(prepDoc)
-	fmt.Printf("\nSaved prep to %s\n", prepPath)
+	fmt.Fprintln(cmd.OutOrStdout(), prepDoc)
+	fmt.Fprintf(cmd.OutOrStdout(), "\nSaved prep to %s\n", prepPath)
 	if previous != nil {
-		fmt.Printf("Previous prep: %s\n", previous.Path)
+		fmt.Fprintf(cmd.OutOrStdout(), "Previous prep: %s\n", previous.Path)
 	}
 	return nil
 }

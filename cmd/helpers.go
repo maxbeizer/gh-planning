@@ -12,6 +12,35 @@ import (
 	"github.com/maxbeizer/gh-planning/internal/config"
 )
 
+// projectConfig holds the resolved project owner, number, and full config.
+type projectConfig struct {
+	Owner   string
+	Project int
+	Cfg     *config.Config
+}
+
+// resolveProjectConfig loads config and resolves owner/project from flag
+// overrides with config defaults as fallback. Returns an error if either
+// owner or project is still empty/zero after resolution.
+func resolveProjectConfig(ownerFlag string, projectFlag int) (*projectConfig, error) {
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, err
+	}
+	owner := ownerFlag
+	project := projectFlag
+	if owner == "" {
+		owner = cfg.DefaultOwner
+	}
+	if project == 0 {
+		project = cfg.DefaultProject
+	}
+	if owner == "" || project == 0 {
+		return nil, fmt.Errorf("project owner and number are required (run `gh planning init`)")
+	}
+	return &projectConfig{Owner: owner, Project: project, Cfg: cfg}, nil
+}
+
 func parseDuration(value string) (time.Duration, error) {
 	if value == "" {
 		return 0, nil

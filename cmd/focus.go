@@ -38,10 +38,10 @@ func runFocus(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if current == nil {
-			fmt.Println("No active focus session.")
+			fmt.Fprintln(cmd.OutOrStdout(), "No active focus session.")
 			return nil
 		}
-		fmt.Printf("Focused on %s (%s)\n", current.Issue, humanizeDuration(current.Elapsed()))
+		fmt.Fprintf(cmd.OutOrStdout(), "Focused on %s (%s)\n", current.Issue, humanizeDuration(current.Elapsed()))
 		return nil
 	}
 	issueRef := args[0]
@@ -61,7 +61,7 @@ func runFocus(cmd *cobra.Command, args []string) error {
 	if err := session.SaveCurrent(sess); err != nil {
 		return err
 	}
-	fmt.Printf("Focused on %s\n", issueRef)
+	fmt.Fprintf(cmd.OutOrStdout(), "Focused on %s\n", issueRef)
 	return nil
 }
 
@@ -71,7 +71,7 @@ func runUnfocus(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if current == nil {
-		fmt.Println("No active focus session.")
+		fmt.Fprintln(cmd.OutOrStdout(), "No active focus session.")
 		return nil
 	}
 	elapsed := current.Elapsed()
@@ -87,7 +87,7 @@ func runUnfocus(cmd *cobra.Command, args []string) error {
 	if err := session.ClearCurrent(); err != nil {
 		return err
 	}
-	fmt.Printf("Cleared focus (%s)\n", humanizeDuration(elapsed))
+	fmt.Fprintf(cmd.OutOrStdout(), "Cleared focus (%s)\n", humanizeDuration(elapsed))
 	return nil
 }
 

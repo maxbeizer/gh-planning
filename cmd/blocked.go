@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/state"
@@ -135,20 +134,12 @@ func runUnblock(cmd *cobra.Command, args []string) error {
 // trySetBlockedStatus attempts to move the issue to "Blocked" status in the project.
 // It fails silently if the project or status is not configured.
 func trySetBlockedStatus(cmd *cobra.Command, repo string, number int) {
-	cfg, _ := config.Load()
-	owner := blockedOpts.Owner
-	project := blockedOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
+	pc, err := resolveProjectConfig(blockedOpts.Owner, blockedOpts.Project)
+	if err != nil {
 		return
 	}
 
-	projectID, _, statusFieldID, statusOptions, err := github.GetProjectInfo(cmd.Context(), owner, project)
+	projectID, _, statusFieldID, statusOptions, err := github.GetProjectInfo(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil || statusFieldID == "" {
 		return
 	}
@@ -156,7 +147,7 @@ func trySetBlockedStatus(cmd *cobra.Command, repo string, number int) {
 	if !ok {
 		return
 	}
-	itemID, err := findProjectItemID(cmd.Context(), owner, project, repo, number)
+	itemID, err := findProjectItemID(cmd.Context(), pc.Owner, pc.Project, repo, number)
 	if err != nil {
 		return
 	}

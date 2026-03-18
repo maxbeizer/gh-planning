@@ -96,14 +96,15 @@ func runTeam(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("👥 Team Dashboard — last %s\n\n", teamOpts.Since)
+	w := cmd.OutOrStdout()
+	fmt.Fprintf(w, "👥 Team Dashboard — last %s\n\n", teamOpts.Since)
 	for idx, summary := range summaries {
-		fmt.Printf("@%s\n", summary.User)
+		fmt.Fprintf(w, "@%s\n", summary.User)
 		if summary.PRsMerged == 0 && summary.IssuesClosed == 0 && summary.PRsOpen == 0 && summary.PRsInReview == 0 && summary.Reviews == 0 {
 			inactiveLabel := inactiveDuration(summary.LastActive)
-			fmt.Printf("  ⚠️ No activity in %s\n", inactiveLabel)
+			fmt.Fprintf(w, "  ⚠️ No activity in %s\n", inactiveLabel)
 		} else {
-			fmt.Printf("  ✅ %d PRs merged, %d issues closed\n", summary.PRsMerged, summary.IssuesClosed)
+			fmt.Fprintf(w, "  ✅ %d PRs merged, %d issues closed\n", summary.PRsMerged, summary.IssuesClosed)
 			line := fmt.Sprintf("  🔵 %d PRs open", summary.PRsOpen)
 			if summary.PRsInReview > 0 {
 				line = fmt.Sprintf("%s, %d in review", line, summary.PRsInReview)
@@ -111,11 +112,11 @@ func runTeam(cmd *cobra.Command, args []string) error {
 			if summary.PRsDraft > 0 {
 				line = fmt.Sprintf("%s (%d draft)", line, summary.PRsDraft)
 			}
-			fmt.Println(line)
+			fmt.Fprintln(w, line)
 		}
-		fmt.Printf("  📅 Last active: %s\n", formatLastActive(summary.LastActive))
+		fmt.Fprintf(w, "  📅 Last active: %s\n", formatLastActive(summary.LastActive))
 		if idx < len(summaries)-1 {
-			fmt.Println()
+			fmt.Fprintln(w)
 		}
 	}
 	return nil

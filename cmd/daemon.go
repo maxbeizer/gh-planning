@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/session"
@@ -98,23 +97,12 @@ func (r *rateLimiter) remaining() int {
 }
 
 func runDaemon(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(daemonOpts.Owner, daemonOpts.Project)
 	if err != nil {
 		return err
 	}
-	owner := daemonOpts.Owner
-	project := daemonOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
-	}
 
-	maxPerHour := cfg.AgentMaxPerHour
+	maxPerHour := pc.Cfg.AgentMaxPerHour
 	if maxPerHour <= 0 {
 		maxPerHour = 3
 	}
@@ -143,7 +131,7 @@ func runDaemon(cmd *cobra.Command, args []string) error {
 	for {
 		fmt.Fprintf(cmd.OutOrStdout(), "⏳ Polling queue...\n")
 
-		items, err := fetchQueue(ctx, owner, project, statuses, daemonOpts.Label)
+		items, err := fetchQueue(ctx, pc.Owner, pc.Project, statuses, daemonOpts.Label)
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Queue poll failed: %v\n", err)
 			if daemonOpts.Once {
@@ -210,7 +198,7 @@ func runDaemon(cmd *cobra.Command, args []string) error {
 
 		// Claim the issue
 		fmt.Fprintf(cmd.OutOrStdout(), "🎯 Claiming #%d: %s (%s)\n", item.Number, item.Title, item.Repo)
-		sessionID, err := claimIssue(ctx, cmd, owner, project, item)
+		sessionID, err := claimIssue(ctx, cmd, pc.Owner, pc.Project, item)
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Claim failed for #%d: %v\n", item.Number, err)
 			if daemonOpts.Once {
