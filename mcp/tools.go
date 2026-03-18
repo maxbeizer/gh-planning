@@ -569,6 +569,7 @@ var tools = []ToolDefinition{
 			"orgs":    stringSchema("Comma-separated orgs for auto-detection"),
 			"team":    stringSchema("Comma-separated team member GitHub usernames"),
 			"use":     boolSchema("Switch to the new profile after creating it"),
+			"force":   boolSchema("Overwrite existing profile with the same name"),
 		}, "name"),
 		Command: []string{"planning", "profile", "create"},
 		Build: func(args map[string]interface{}) ([]string, error) {
@@ -584,6 +585,34 @@ var tools = []ToolDefinition{
 				"orgs":    flagString("--orgs"),
 				"team":    flagString("--team"),
 				"use":     flagBool("--use"),
+				"force":   flagBool("--force"),
+			})
+		},
+	},
+	{
+		Name:        "planning-profile-update",
+		Description: "Update an existing profile. Only the provided fields are changed; other fields are preserved.",
+		InputSchema: objectSchema(map[string]interface{}{
+			"name":    stringSchema("Profile name to update"),
+			"project": intSchema("New project number"),
+			"owner":   stringSchema("New project owner"),
+			"repos":   stringSchema("New comma-separated repos"),
+			"orgs":    stringSchema("New comma-separated orgs"),
+			"team":    stringSchema("New comma-separated team members"),
+		}, "name"),
+		Command: []string{"planning", "profile", "update"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			name := firstString(args, "name")
+			if name == "" {
+				return nil, fmt.Errorf("name is required")
+			}
+			cmdArgs := []string{"planning", "profile", "update", name}
+			return buildFlags(cmdArgs, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+				"repos":   flagString("--repos"),
+				"orgs":    flagString("--orgs"),
+				"team":    flagString("--team"),
 			})
 		},
 	},
