@@ -217,6 +217,40 @@ func DeleteProfile(name string) error {
 	return saveFile(cf)
 }
 
+// LoadProfileByName returns a copy of the named profile without switching
+// the active profile.
+func LoadProfileByName(name string) (*Config, error) {
+	cf, err := loadFile()
+	if err != nil {
+		return nil, err
+	}
+	if len(cf.Profiles) == 0 {
+		return nil, fmt.Errorf("no profiles configured")
+	}
+	profile, ok := cf.Profiles[name]
+	if !ok {
+		return nil, fmt.Errorf("profile %q not found", name)
+	}
+	return &profile, nil
+}
+
+// SaveProfileByName writes the config to a named profile without switching
+// the active profile.
+func SaveProfileByName(name string, cfg *Config) error {
+	cf, err := loadFile()
+	if err != nil {
+		return err
+	}
+	if len(cf.Profiles) == 0 {
+		cf.Profiles = map[string]Config{
+			"default": cf.Config,
+		}
+		cf.Config = Config{}
+	}
+	cf.Profiles[name] = *cfg
+	return saveFile(cf)
+}
+
 func profileNames(cf *configFile) string {
 	names := []string{}
 	for name := range cf.Profiles {

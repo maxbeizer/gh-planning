@@ -69,6 +69,7 @@ var profileCreateOpts struct {
 	Orgs    string
 	Team    string
 	Use     bool
+	Force   bool
 }
 
 var profileCreateCmd = &cobra.Command{
@@ -81,7 +82,8 @@ The current repo is auto-detected and offered as a default for the repos field.
 
 Examples:
   gh planning profile create work
-  gh planning profile create work --owner github --project 42 --repos "github/*" --use`,
+  gh planning profile create work --owner github --project 42 --repos "github/*" --use
+  gh planning profile create work --force --project 99`,
 	Args: cobra.ExactArgs(1),
 	RunE: runProfileCreate,
 }
@@ -92,6 +94,28 @@ var profileDetectCmd = &cobra.Command{
 	RunE:  runProfileDetect,
 }
 
+var profileUpdateOpts struct {
+	Project int
+	Owner   string
+	Repos   string
+	Orgs    string
+	Team    string
+}
+
+var profileUpdateCmd = &cobra.Command{
+	Use:   "update <name>",
+	Short: "Update an existing profile",
+	Long: `Update an existing profile with new values. Only the provided flags
+are changed; other fields are preserved.
+
+Examples:
+  gh planning profile update work --project 99
+  gh planning profile update work --owner github --repos "github/*"
+  gh planning profile update work --team "alice,bob"`,
+	Args: cobra.ExactArgs(1),
+	RunE: runProfileUpdate,
+}
+
 func init() {
 	profileCmd.AddCommand(profileSetCmd)
 	profileCmd.AddCommand(profileShowCmd)
@@ -100,6 +124,7 @@ func init() {
 	profileCmd.AddCommand(profileDeleteCmd)
 	profileCmd.AddCommand(profileCreateCmd)
 	profileCmd.AddCommand(profileDetectCmd)
+	profileCmd.AddCommand(profileUpdateCmd)
 
 	profileCreateCmd.Flags().IntVar(&profileCreateOpts.Project, "project", 0, "Default project number")
 	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Owner, "owner", "", "Project owner")
@@ -107,6 +132,13 @@ func init() {
 	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Orgs, "orgs", "", "Comma-separated orgs for auto-detection")
 	profileCreateCmd.Flags().StringVar(&profileCreateOpts.Team, "team", "", "Comma-separated team members")
 	profileCreateCmd.Flags().BoolVar(&profileCreateOpts.Use, "use", false, "Switch to the new profile after creating it")
+	profileCreateCmd.Flags().BoolVar(&profileCreateOpts.Force, "force", false, "Overwrite existing profile")
+
+	profileUpdateCmd.Flags().IntVar(&profileUpdateOpts.Project, "project", 0, "Default project number")
+	profileUpdateCmd.Flags().StringVar(&profileUpdateOpts.Owner, "owner", "", "Project owner")
+	profileUpdateCmd.Flags().StringVar(&profileUpdateOpts.Repos, "repos", "", "Comma-separated repos (e.g., github/github,github/*)")
+	profileUpdateCmd.Flags().StringVar(&profileUpdateOpts.Orgs, "orgs", "", "Comma-separated orgs for auto-detection")
+	profileUpdateCmd.Flags().StringVar(&profileUpdateOpts.Team, "team", "", "Comma-separated team members")
 }
 
 func runProfileSet(cmd *cobra.Command, args []string) error {
@@ -272,8 +304,8 @@ func runProfileCreate(cmd *cobra.Command, args []string) error {
 	// Check if profile already exists
 	names, _, _ := config.ListProfiles()
 	for _, n := range names {
-		if n == name {
-			return fmt.Errorf("profile %q already exists — use `gh planning profile use %s` to switch to it", name, name)
+		if n == name && !profileCreateOpts.Force {
+			return fmt.Errorf("profile %q already exists — use `gh planning profile use %s` to switch to it, or use --force to overwrite", name, name)
 		}
 	}
 
@@ -417,6 +449,70 @@ func runProfileCreate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "\n  Switched to profile %q\n", name)
 	} else {
 		fmt.Fprintf(cmd.OutOrStdout(), "\n  Run "+tui.Command.Render("gh planning profile use %s")+" to switch to it.\n", name)
+	}
+	return nil
+}
+
+func runProfileUpdate(cmd *cobra.Command, args []string) error {
+	name := args[0]
+
+	// Verify the profile exists
+	cfg, err := config.LoadProfileByName(name)
+	if err != nil {
+		return err
+	}
+
+	// Check at least one flag was provided
+	hasFlags := cmd.Flags().Changed("project") || cmd.Flags().Changed("owner") ||
+		cmd.Flags().Changed("repos") || cmd.Flags().Changed("orgs") || cmd.Flags().Changed("team")
+	if !hasFlags {
+		return fmt.Errorf("no flags provided; use --project, --owner, --repos, --orgs, or --team to update fields")
+	}
+
+	// Merge provided flags into existing config
+	if cmd.Flags().Changed("project") {
+		cfg.DefaultProject = profileUpdateOpts.Project
+	}
+	if cmd.Flags().Changed("owner") {
+		cfg.DefaultOwner = profileUpdateOpts.Owner
+	}
+	if cmd.Flags().Changed("repos") {
+		cfg.Repos = splitAndTrim(profileUpdateOpts.Repos)
+	}
+	if cmd.Flags().Changed("orgs") {
+		cfg.Orgs = splitAndTrim(profileUpdateOpts.Orgs)
+	}
+	if cmd.Flags().Changed("team") {
+		cfg.Team = splitAndTrim(profileUpdateOpts.Team)
+	}
+
+	if err := config.SaveProfileByName(name, cfg); err != nil {
+		return err
+	}
+
+	if OutputOptions().JSON || OutputOptions().JQ != "" {
+		return output.PrintJSON(map[string]interface{}{
+			"profile": name,
+			"updated": true,
+			"config":  cfg,
+		}, OutputOptions())
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), tui.Success.Render("✓ Updated profile %q")+"\n", name)
+	if cfg.DefaultOwner != "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Owner:   %s\n", cfg.DefaultOwner)
+	}
+	if cfg.DefaultProject != 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Project: %d\n", cfg.DefaultProject)
+	}
+	if len(cfg.Repos) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Repos:   %s\n", strings.Join(cfg.Repos, ", "))
+	}
+	if len(cfg.Orgs) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Orgs:    %s\n", strings.Join(cfg.Orgs, ", "))
+	}
+	if len(cfg.Team) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Team:    %s\n", strings.Join(cfg.Team, ", "))
 	}
 	return nil
 }

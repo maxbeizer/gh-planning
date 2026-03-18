@@ -22,6 +22,7 @@ func PrintJSON(data interface{}, opts Options) error {
 		return runJQ(payload, opts.JQ)
 	}
 	fmt.Println(string(payload))
+	os.Stdout.Sync()
 	return nil
 }
 
@@ -29,6 +30,7 @@ func runJQ(input []byte, expr string) error {
 	if _, err := exec.LookPath("jq"); err != nil {
 		fmt.Fprintln(os.Stderr, "jq not installed; printing JSON instead")
 		fmt.Println(string(input))
+		os.Stdout.Sync()
 		return nil
 	}
 	cmd := exec.Command("jq", expr)
