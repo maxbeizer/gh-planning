@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -271,7 +272,9 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 
 	// Update last-seen if --new-session
 	if agentContextOpts.NewSession {
-		_ = state.UpdateLastSeen(time.Now())
+		if err := state.UpdateLastSeen(time.Now()); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to update last-seen: %v\n", err)
+		}
 	}
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {

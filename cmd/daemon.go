@@ -353,7 +353,9 @@ func claimIssue(ctx context.Context, cmd *cobra.Command, owner string, project i
 		StartedAt:   time.Now().UTC(),
 		SessionID:   sessionID,
 	}
-	_ = session.SaveCurrent(focus) // best-effort for daemon
+	if err := session.SaveCurrent(focus); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to save focus session: %v\n", err)
+	}
 
 	return sessionID, nil
 }
