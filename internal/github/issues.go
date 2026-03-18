@@ -37,3 +37,43 @@ func ParseIssueCreateOutput(payload []byte) (*Issue, error) {
 	}
 	return &issue, nil
 }
+
+const contentIDQuery = `query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    issueOrPullRequest(number: $number) {
+      ... on Issue { id }
+      ... on PullRequest { id }
+    }
+  }
+}`
+
+type contentIDResponse struct {
+	Data struct {
+		Repository struct {
+			IssueOrPullRequest struct {
+				ID string `json:"id"`
+			} `json:"issueOrPullRequest"`
+		} `json:"repository"`
+	} `json:"data"`
+}
+
+// GetContentID returns the GraphQL node ID for an issue or pull request.
+func GetContentID(ctx context.Context, owner string, repo string, number int) (string, error) {
+	payload, err := GraphQL(ctx, contentIDQuery, map[string]interface{}{
+		"owner":  owner,
+		"repo":   repo,
+		"number": number,
+	})
+	if err != nil {
+		return "", err
+	}
+	var resp contentIDResponse
+	if err := json.Unmarshal(payload, &resp); err != nil {
+		return "", err
+	}
+	id := resp.Data.Repository.IssueOrPullRequest.ID
+	if id == "" {
+		return "", fmt.Errorf("issue or PR #%d not found in %s/%s", number, owner, repo)
+	}
+	return id, nil
+}
