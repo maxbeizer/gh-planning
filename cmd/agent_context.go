@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/session"
@@ -75,20 +74,9 @@ func init() {
 }
 
 func runAgentContext(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(agentContextOpts.Owner, agentContextOpts.Project)
 	if err != nil {
 		return err
-	}
-	owner := agentContextOpts.Owner
-	project := agentContextOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	var focusRepo string
@@ -129,7 +117,7 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	titleCh := make(chan titleResult, 1)
 
 	go func() {
-		data, err := github.GetProject(cmd.Context(), owner, project)
+		data, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 		projectCh <- projectResult{data, err}
 	}()
 	go func() {
@@ -244,9 +232,9 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	}
 
 	configPayload := map[string]interface{}{
-		"defaultOwner":   cfg.DefaultOwner,
-		"defaultProject": cfg.DefaultProject,
-		"team":           cfg.Team,
+		"defaultOwner":   pc.Cfg.DefaultOwner,
+		"defaultProject": pc.Cfg.DefaultProject,
+		"team":           pc.Cfg.Team,
 	}
 
 	// Gather recent logs
@@ -280,8 +268,8 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
 			"focus":        focusIssue,
-			"project":      project,
-			"owner":        owner,
+			"project":      pc.Project,
+			"owner":        pc.Owner,
 			"statusCounts": statusCounts,
 			"handoffs":     focusHandoffs,
 			"decisions":    decisions,
@@ -294,11 +282,11 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Println("🤖 Agent Context — gh-planning")
+	fmt.Fprintln(cmd.OutOrStdout(), "🤖 Agent Context — gh-planning")
 	if agentContextOpts.NewSession {
-		fmt.Println("   (new session started)")
+		fmt.Fprintln(cmd.OutOrStdout(), "   (new session started)")
 	}
-	fmt.Println()
+	fmt.Fprintln(cmd.OutOrStdout())
 
 	if focusRepo != "" && focusNumber != 0 {
 		title := focusIssue.Title
@@ -311,20 +299,20 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 			focusURL := fmt.Sprintf("https://github.com/%s/issues/%d", focusRepo, focusNumber)
 			focusRef = issueRef(focusNumber, focusURL)
 		}
-		fmt.Printf("📍 Focus: %s \"%s\" (%s)\n", focusRef, title, focusRepo)
+		fmt.Fprintf(cmd.OutOrStdout(), "📍 Focus: %s \"%s\" (%s)\n", focusRef, title, focusRepo)
 		if len(focusHandoffs) > 0 {
-			fmt.Printf("   Last handoff (%s): %s\n", humanizeDuration(time.Since(focusHandoffs[0].Time)), focusIssue.LastHandoff)
+			fmt.Fprintf(cmd.OutOrStdout(), "   Last handoff (%s): %s\n", humanizeDuration(time.Since(focusHandoffs[0].Time)), focusIssue.LastHandoff)
 		}
 	} else {
-		fmt.Println("📍 Focus: none")
+		fmt.Fprintln(cmd.OutOrStdout(), "📍 Focus: none")
 	}
 
 	if nextUp != nil {
-		fmt.Printf("📋 Next up: %s \"%s\" (%s)\n", issueRef(nextUp.Number, nextUp.URL), nextUp.Title, nextUp.Repository)
+		fmt.Fprintf(cmd.OutOrStdout(), "📋 Next up: %s \"%s\" (%s)\n", issueRef(nextUp.Number, nextUp.URL), nextUp.Title, nextUp.Repository)
 	}
 
-	fmt.Println()
-	fmt.Printf("📊 Project #%d Status:\n", project)
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintf(cmd.OutOrStdout(), "📊 Project #%d Status:\n", pc.Project)
 	statusKeys := make([]string, 0, len(statusCounts))
 	for status := range statusCounts {
 		statusKeys = append(statusKeys, status)
@@ -335,64 +323,64 @@ func runAgentContext(cmd *cobra.Command, args []string) error {
 		statusParts = append(statusParts, fmt.Sprintf("%s: %d", status, statusCounts[status]))
 	}
 	if len(statusParts) > 0 {
-		fmt.Printf("   %s\n", strings.Join(statusParts, " | "))
+		fmt.Fprintf(cmd.OutOrStdout(), "   %s\n", strings.Join(statusParts, " | "))
 	}
 
 	if len(recentLogs) > 0 {
-		fmt.Println()
-		fmt.Println("📝 Recent Logs:")
+		fmt.Fprintln(cmd.OutOrStdout())
+		fmt.Fprintln(cmd.OutOrStdout(), "📝 Recent Logs:")
 		for _, entry := range recentLogs {
 			age := humanizeDuration(time.Since(entry.Time))
-			fmt.Printf("   • [%s] %s (%s, %s)\n", entry.Kind, entry.Message, entry.Issue, age)
+			fmt.Fprintf(cmd.OutOrStdout(), "   • [%s] %s (%s, %s)\n", entry.Kind, entry.Message, entry.Issue, age)
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("🔄 Recent Decisions:")
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintln(cmd.OutOrStdout(), "🔄 Recent Decisions:")
 	if len(decisions) == 0 {
-		fmt.Println("   • none")
+		fmt.Fprintln(cmd.OutOrStdout(), "   • none")
 	} else {
 		for _, decision := range decisions {
-			fmt.Printf("   • %s (%s)\n", decision.Decision, decision.Issue)
+			fmt.Fprintf(cmd.OutOrStdout(), "   • %s (%s)\n", decision.Decision, decision.Issue)
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("👀 Needs Review:")
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintln(cmd.OutOrStdout(), "👀 Needs Review:")
 	if len(reviewRequests) == 0 {
-		fmt.Println("   • none")
+		fmt.Fprintln(cmd.OutOrStdout(), "   • none")
 	} else {
 		for _, review := range reviewRequests {
-			fmt.Printf("   • PR %s: %s (@%s)\n", issueRef(review.Number, review.URL), review.Title, review.Author)
+			fmt.Fprintf(cmd.OutOrStdout(), "   • PR %s: %s (@%s)\n", issueRef(review.Number, review.URL), review.Title, review.Author)
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("🚫 Blocked:")
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintln(cmd.OutOrStdout(), "🚫 Blocked:")
 	if len(blockedItems) == 0 {
-		fmt.Println("   • none")
+		fmt.Fprintln(cmd.OutOrStdout(), "   • none")
 	} else {
 		for _, blocked := range blockedItems {
-			fmt.Printf("   • %s: %s\n", issueRef(blocked.Number, blocked.URL), blocked.Title)
+			fmt.Fprintf(cmd.OutOrStdout(), "   • %s: %s\n", issueRef(blocked.Number, blocked.URL), blocked.Title)
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("⚙️ Config:")
-	fmt.Printf("   • default-owner: %s\n", cfg.DefaultOwner)
-	fmt.Printf("   • default-project: %d\n", cfg.DefaultProject)
-	if len(cfg.Team) > 0 {
-		fmt.Printf("   • team: %s\n", strings.Join(cfg.Team, ", "))
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintln(cmd.OutOrStdout(), "⚙️ Config:")
+	fmt.Fprintf(cmd.OutOrStdout(), "   • default-owner: %s\n", pc.Cfg.DefaultOwner)
+	fmt.Fprintf(cmd.OutOrStdout(), "   • default-project: %d\n", pc.Cfg.DefaultProject)
+	if len(pc.Cfg.Team) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "   • team: %s\n", strings.Join(pc.Cfg.Team, ", "))
 	}
 
 	if agentContextOpts.NewSession {
-		fmt.Println()
-		fmt.Println("💡 Commands available:")
-		fmt.Println("   gh planning claim <issue>     — claim and start work")
-		fmt.Println("   gh planning log \"message\"     — log progress")
-		fmt.Println("   gh planning handoff <issue>   — structured handoff")
-		fmt.Println("   gh planning complete <issue>  — mark work done")
-		fmt.Println("   gh planning queue             — find more work")
+		fmt.Fprintln(cmd.OutOrStdout())
+		fmt.Fprintln(cmd.OutOrStdout(), "💡 Commands available:")
+		fmt.Fprintln(cmd.OutOrStdout(), "   gh planning claim <issue>     — claim and start work")
+		fmt.Fprintln(cmd.OutOrStdout(), "   gh planning log \"message\"     — log progress")
+		fmt.Fprintln(cmd.OutOrStdout(), "   gh planning handoff <issue>   — structured handoff")
+		fmt.Fprintln(cmd.OutOrStdout(), "   gh planning complete <issue>  — mark work done")
+		fmt.Fprintln(cmd.OutOrStdout(), "   gh planning queue             — find more work")
 	}
 	return nil
 }

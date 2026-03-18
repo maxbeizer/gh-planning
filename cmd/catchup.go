@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/state"
@@ -47,20 +46,9 @@ func init() {
 }
 
 func runCatchup(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(catchupOpts.Owner, catchupOpts.Project)
 	if err != nil {
 		return err
-	}
-	owner := catchupOpts.Owner
-	project := catchupOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	sinceTime, label, err := resolveSince(catchupOpts.Since)
@@ -100,7 +88,7 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 		userCh <- userResult{user, err}
 	}()
 	go func() {
-		data, err := github.GetProject(cmd.Context(), owner, project)
+		data, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 		projectCh <- projectResult{data, err}
 	}()
 
@@ -195,12 +183,12 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("📬 Catch-up — since %s\n\n", label)
+	fmt.Fprintf(cmd.OutOrStdout(), "📬 Catch-up — since %s\n\n", label)
 	for _, section := range sections {
 		if len(section.Items) == 0 {
 			continue
 		}
-		fmt.Printf("%s (%d)\n", section.Title, len(section.Items))
+		fmt.Fprintf(cmd.OutOrStdout(), "%s (%d)\n", section.Title, len(section.Items))
 		for _, item := range section.Items {
 			line := fmt.Sprintf("  • %s: %s (%s)", issueRef(item.Number, item.URL), item.Title, item.Repo)
 			if item.Author != "" {
@@ -209,9 +197,9 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 			if item.Comments > 0 {
 				line = fmt.Sprintf("%s — %d new comments", line, item.Comments)
 			}
-			fmt.Println(line)
+			fmt.Fprintln(cmd.OutOrStdout(), line)
 		}
-		fmt.Println()
+		fmt.Fprintln(cmd.OutOrStdout())
 	}
 
 	return nil

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/session"
@@ -40,23 +39,12 @@ func init() {
 }
 
 func runDashboard(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(dashboardOpts.Owner, dashboardOpts.Project)
 	if err != nil {
 		return err
 	}
-	owner := dashboardOpts.Owner
-	project := dashboardOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
-	}
 
-	data, err := loadDashboardData(cmd, owner, project)
+	data, err := loadDashboardData(cmd, pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}

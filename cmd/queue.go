@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -49,27 +47,16 @@ func init() {
 }
 
 func runQueue(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(queueOpts.Owner, queueOpts.Project)
 	if err != nil {
 		return err
-	}
-	owner := queueOpts.Owner
-	project := queueOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 	statuses := queueOpts.Status
 	if len(statuses) == 0 {
 		statuses = []string{"Backlog", "Ready"}
 	}
 
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
+	projectData, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -123,19 +110,19 @@ func runQueue(cmd *cobra.Command, args []string) error {
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
-			"project": project,
-			"owner":   owner,
+			"project": pc.Project,
+			"owner":   pc.Owner,
 			"items":   readyItems,
 		}
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("🤖 Agent Queue — Project #%d\n\n", project)
+	fmt.Fprintf(cmd.OutOrStdout(), "🤖 Agent Queue — Project #%d\n\n", pc.Project)
 	if len(readyItems) == 0 {
-		fmt.Println("No items ready for processing.")
+		fmt.Fprintln(cmd.OutOrStdout(), "No items ready for processing.")
 		return nil
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 2, 2, ' ', 0)
 	for i, item := range readyItems {
 		priority := item.Priority
 		if priority == "" {
@@ -150,8 +137,8 @@ func runQueue(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(w, "  %d.\t%s\t%s\t%s\t%s\t%s\n", i+1, issueRef(item.Number, item.URL), truncate(item.Title, 28), item.Repo, priority, label)
 	}
 	w.Flush()
-	fmt.Println()
-	fmt.Printf("%d items ready for processing\n", len(readyItems))
+	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintf(cmd.OutOrStdout(), "%d items ready for processing\n", len(readyItems))
 	return nil
 }
 

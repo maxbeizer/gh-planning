@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/maxbeizer/gh-planning/internal/session"
@@ -37,20 +36,9 @@ func runClaim(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(claimOpts.Owner, claimOpts.Project)
 	if err != nil {
 		return err
-	}
-	owner := claimOpts.Owner
-	project := claimOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	sessionID := claimOpts.Session
@@ -68,7 +56,7 @@ func runClaim(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	projectID, _, statusFieldID, statusOptions, err := github.GetProjectInfo(cmd.Context(), owner, project)
+	projectID, _, statusFieldID, statusOptions, err := github.GetProjectInfo(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -79,7 +67,7 @@ func runClaim(cmd *cobra.Command, args []string) error {
 	if !ok {
 		return fmt.Errorf("status option not found: In Progress")
 	}
-	itemID, err := findProjectItemID(cmd.Context(), owner, project, repo, number)
+	itemID, err := findProjectItemID(cmd.Context(), pc.Owner, pc.Project, repo, number)
 	if err != nil {
 		return err
 	}
@@ -108,6 +96,6 @@ func runClaim(cmd *cobra.Command, args []string) error {
 	}
 
 	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
-	fmt.Printf("Claimed %s%s (session %s)\n", repo, issueRef(number, issueURL), sessionID)
+	fmt.Fprintf(cmd.OutOrStdout(), "Claimed %s%s (session %s)\n", repo, issueRef(number, issueURL), sessionID)
 	return nil
 }

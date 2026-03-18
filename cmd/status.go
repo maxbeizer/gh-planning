@@ -9,7 +9,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -44,25 +43,14 @@ func init() {
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(statusOpts.Owner, statusOpts.Project)
 	if err != nil {
 		return err
 	}
-	owner := statusOpts.Owner
-	project := statusOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
-	}
 
 	if statusOpts.Open {
-		url := projectURL(owner, project)
-		fmt.Println(url)
+		url := projectURL(pc.Owner, pc.Project)
+		fmt.Fprintln(cmd.OutOrStdout(), url)
 		return openURL(url)
 	}
 
@@ -70,7 +58,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("invalid stale duration: %w", err)
 	}
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
+	projectData, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -79,15 +67,15 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
 			"title":  projectData.Title,
-			"owner":  owner,
-			"number": project,
+			"owner":  pc.Owner,
+			"number": pc.Project,
 			"items":  filtered,
 		}
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("📊 Project: %s (#%d)\n", projectData.Title, project)
-	fmt.Printf("   %s\n\n", projectURL(owner, project))
+	fmt.Fprintf(cmd.OutOrStdout(), "📊 Project: %s (#%d)\n", projectData.Title, pc.Project)
+	fmt.Fprintf(cmd.OutOrStdout(), "   %s\n\n", projectURL(pc.Owner, pc.Project))
 
 	if statusOpts.Board || statusOpts.Swimlanes {
 		if statusOpts.Swimlanes {

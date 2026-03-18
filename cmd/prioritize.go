@@ -8,7 +8,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -44,27 +43,15 @@ type prioritizeItem struct {
 }
 
 func runPrioritize(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(prioritizeOpts.Owner, prioritizeOpts.Project)
 	if err != nil {
 		return err
-	}
-
-	owner := prioritizeOpts.Owner
-	project := prioritizeOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return fmt.Errorf("project owner and number are required (run `gh planning init`)")
 	}
 
 	statusFilter := prioritizeOpts.Status
 
 	// Fetch project items
-	projectData, err := github.GetProject(cmd.Context(), owner, project)
+	projectData, err := github.GetProject(cmd.Context(), pc.Owner, pc.Project)
 	if err != nil {
 		return err
 	}
@@ -99,25 +86,25 @@ func runPrioritize(cmd *cobra.Command, args []string) error {
 	if len(items) == 0 {
 		if OutputOptions().JSON || OutputOptions().JQ != "" {
 			return output.PrintJSON(map[string]interface{}{
-				"project": project,
-				"owner":   owner,
+				"project": pc.Project,
+				"owner":   pc.Owner,
 				"status":  statusFilter,
 				"items":   []prioritizeItem{},
 				"message": "No items found",
 			}, OutputOptions())
 		}
-		fmt.Printf("No items found in %q status.\n", statusFilter)
+		fmt.Fprintf(cmd.OutOrStdout(), "No items found in %q status.\n", statusFilter)
 		return nil
 	}
 
 	// Display numbered list
-	fmt.Printf("📋 %s items in project #%d (%q status)\n\n", projectData.Title, project, statusFilter)
+	fmt.Fprintf(cmd.OutOrStdout(), "📋 %s items in project #%d (%q status)\n\n", projectData.Title, pc.Project, statusFilter)
 	printPrioritizeItems(items)
 
 	reader := bufio.NewReader(os.Stdin)
 
 	// Prompt for reorder
-	fmt.Printf("\nEnter new order (e.g. %s), or press Enter to skip: ", exampleOrder(len(items)))
+	fmt.Fprintf(cmd.OutOrStdout(), "\nEnter new order (e.g. %s), or press Enter to skip: ", exampleOrder(len(items)))
 	orderInput, err := readLine(reader)
 	if err != nil {
 		return err
@@ -133,26 +120,26 @@ func runPrioritize(cmd *cobra.Command, args []string) error {
 			newItems[i] = items[idx]
 		}
 		items = newItems
-		fmt.Println("\n✅ Reordered:")
+		fmt.Fprintln(cmd.OutOrStdout(), "\n✅ Reordered:")
 		printPrioritizeItems(items)
 	}
 
 	// Get project ID for mutations
-	projectID, _, _, _, infoErr := github.GetProjectInfo(cmd.Context(), owner, project)
+	projectID, _, _, _, infoErr := github.GetProjectInfo(cmd.Context(), pc.Owner, pc.Project)
 	if infoErr != nil {
 		return infoErr
 	}
 
 	// Check for Priority field on the project
-	priorityFieldID, priorityOptions, err := github.GetProjectField(cmd.Context(), owner, project, "Priority")
+	priorityFieldID, priorityOptions, err := github.GetProjectField(cmd.Context(), pc.Owner, pc.Project, "Priority")
 	if err != nil {
 		return err
 	}
 
 	if priorityFieldID != "" && len(priorityOptions) > 0 {
 		optionNames := sortedPriorityOptions(priorityOptions)
-		fmt.Printf("\n🏷️  Priority field found with options: %s\n", strings.Join(optionNames, ", "))
-		fmt.Printf("Assign priorities to top items? Enter priorities for each item (e.g. P0,P1,P2), or press Enter to skip: ")
+		fmt.Fprintf(cmd.OutOrStdout(), "\n🏷️  Priority field found with options: %s\n", strings.Join(optionNames, ", "))
+		fmt.Fprintf(cmd.OutOrStdout(), "Assign priorities to top items? Enter priorities for each item (e.g. P0,P1,P2), or press Enter to skip: ")
 		priInput, err := readLine(reader)
 		if err != nil {
 			return err
@@ -178,25 +165,25 @@ func runPrioritize(cmd *cobra.Command, args []string) error {
 						break
 					}
 				}
-				fmt.Printf("  ✓ #%d %s → %s\n", items[i].Number, truncate(items[i].Title, 30), items[i].Priority)
+				fmt.Fprintf(cmd.OutOrStdout(), "  ✓ #%d %s → %s\n", items[i].Number, truncate(items[i].Title, 30), items[i].Priority)
 			}
 		}
 	} else {
-		fmt.Println("\nℹ️  No Priority field found on this project. Showing reordered list as recommendation.")
+		fmt.Fprintln(cmd.OutOrStdout(), "\nℹ️  No Priority field found on this project. Showing reordered list as recommendation.")
 	}
 
 	// JSON output
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
-			"project": project,
-			"owner":   owner,
+			"project": pc.Project,
+			"owner":   pc.Owner,
 			"status":  statusFilter,
 			"items":   items,
 		}
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("\n📊 %d items prioritized in %q\n", len(items), statusFilter)
+	fmt.Fprintf(cmd.OutOrStdout(), "\n📊 %d items prioritized in %q\n", len(items), statusFilter)
 	return nil
 }
 

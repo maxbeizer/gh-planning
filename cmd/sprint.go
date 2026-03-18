@@ -10,7 +10,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/maxbeizer/gh-planning/internal/config"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -55,22 +54,11 @@ func init() {
 }
 
 func resolveSprintProjectConfig() (string, int, error) {
-	cfg, err := config.Load()
+	pc, err := resolveProjectConfig(sprintOpts.Owner, sprintOpts.Project)
 	if err != nil {
 		return "", 0, err
 	}
-	owner := sprintOpts.Owner
-	project := sprintOpts.Project
-	if owner == "" {
-		owner = cfg.DefaultOwner
-	}
-	if project == 0 {
-		project = cfg.DefaultProject
-	}
-	if owner == "" || project == 0 {
-		return "", 0, fmt.Errorf("project owner and number are required (run `gh planning init`)")
-	}
-	return owner, project, nil
+	return pc.Owner, pc.Project, nil
 }
 
 // sprintIterationInfo holds metadata about a project's iteration field.
@@ -303,35 +291,35 @@ func runSprintShow(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("🏃 Sprint: %s (#%d)\n", projectData.Title, project)
+	fmt.Fprintf(cmd.OutOrStdout(), "🏃 Sprint: %s (#%d)\n", projectData.Title, project)
 	if hasIteration && currentIteration != nil {
-		fmt.Printf("   Iteration: %s", currentIteration.Title)
+		fmt.Fprintf(cmd.OutOrStdout(), "   Iteration: %s", currentIteration.Title)
 		if currentIteration.StartDate != "" {
 			start, err := time.Parse("2006-01-02", currentIteration.StartDate)
 			if err == nil {
 				end := start.AddDate(0, 0, currentIteration.Duration)
 				remaining := time.Until(end)
 				if remaining > 0 {
-					fmt.Printf(" (%d days remaining)", int(remaining.Hours()/24))
+					fmt.Fprintf(cmd.OutOrStdout(), " (%d days remaining)", int(remaining.Hours()/24))
 				}
-				fmt.Printf("\n   %s → %s", start.Format("Jan 2"), end.Format("Jan 2"))
+				fmt.Fprintf(cmd.OutOrStdout(), "\n   %s → %s", start.Format("Jan 2"), end.Format("Jan 2"))
 			}
 		}
-		fmt.Println()
+		fmt.Fprintln(cmd.OutOrStdout())
 	} else {
-		fmt.Println("   ℹ️  No iteration field found — showing active items as sprint proxy")
+		fmt.Fprintln(cmd.OutOrStdout(), "   ℹ️  No iteration field found — showing active items as sprint proxy")
 	}
-	fmt.Println()
+	fmt.Fprintln(cmd.OutOrStdout())
 
 	total := countItems(sprintItems)
 	if total == 0 {
-		fmt.Println("  No items in the current sprint.")
+		fmt.Fprintln(cmd.OutOrStdout(), "  No items in the current sprint.")
 		return nil
 	}
 
 	printStatusGroups(sprintItems, 0)
 
-	fmt.Printf("📊 Total: %d items\n", total)
+	fmt.Fprintf(cmd.OutOrStdout(), "📊 Total: %d items\n", total)
 	return nil
 }
 
@@ -378,15 +366,15 @@ func runSprintCreate(cmd *cobra.Command, args []string) error {
 		return output.PrintJSON(payload, OutputOptions())
 	}
 
-	fmt.Printf("🆕 Sprint Planning: %s (#%d)\n", projectData.Title, project)
-	fmt.Printf("   Duration: %s | Limit: %d items\n\n", duration, limit)
+	fmt.Fprintf(cmd.OutOrStdout(), "🆕 Sprint Planning: %s (#%d)\n", projectData.Title, project)
+	fmt.Fprintf(cmd.OutOrStdout(), "   Duration: %s | Limit: %d items\n\n", duration, limit)
 
 	if len(backlogItems) == 0 {
-		fmt.Println("  No backlog items found. Your backlog is empty! 🎉")
+		fmt.Fprintln(cmd.OutOrStdout(), "  No backlog items found. Your backlog is empty! 🎉")
 		return nil
 	}
 
-	fmt.Printf("📋 Top %d backlog candidates:\n", len(backlogItems))
+	fmt.Fprintf(cmd.OutOrStdout(), "📋 Top %d backlog candidates:\n", len(backlogItems))
 	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
 	for i, item := range backlogItems {
 		assignee := "—"
@@ -401,8 +389,8 @@ func runSprintCreate(cmd *cobra.Command, args []string) error {
 	}
 	w.Flush()
 
-	fmt.Printf("\n💡 To move items into the sprint, update their status in your project board\n")
-	fmt.Printf("   or set the iteration field via the GitHub UI.\n")
+	fmt.Fprintf(cmd.OutOrStdout(), "\n💡 To move items into the sprint, update their status in your project board\n")
+	fmt.Fprintf(cmd.OutOrStdout(), "   or set the iteration field via the GitHub UI.\n")
 	return nil
 }
 
