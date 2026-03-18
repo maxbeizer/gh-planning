@@ -235,12 +235,27 @@ func saveProjectCache(owner string, number int, project *Project) {
 	if err != nil {
 		return
 	}
-	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
 	data, err := json.Marshal(cachedProject{Project: project, FetchedAt: time.Now()})
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o644)
+	// Atomic write: temp file + rename to avoid partial writes.
+	tmp, err := os.CreateTemp(dir, ".cache-*")
+	if err != nil {
+		return
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, writeErr := tmp.Write(data); writeErr != nil {
+		tmp.Close()
+		return
+	}
+	tmp.Close()
+	_ = os.Rename(tmpName, path)
 }
 
 func GetProject(ctx context.Context, owner string, number int) (*Project, error) {

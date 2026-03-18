@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/maxbeizer/gh-planning/internal/config"
@@ -159,5 +160,7 @@ func trySetBlockedStatus(cmd *cobra.Command, repo string, number int) {
 	if err != nil {
 		return
 	}
-	_ = github.UpdateItemStatus(cmd.Context(), projectID, itemID, statusFieldID, optionID)
+	if err := github.UpdateItemStatus(cmd.Context(), projectID, itemID, statusFieldID, optionID); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to update project status: %v\n", err)
+	}
 }

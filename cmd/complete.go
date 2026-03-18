@@ -152,12 +152,8 @@ func runComplete(cmd *cobra.Command, args []string) error {
 }
 
 func buildCompletionComment(sessionID string, done []string, pr int) (string, time.Time) {
-	stamp := time.Now().UTC()
-	loc, err := time.LoadLocation("America/Chicago")
-	if err == nil {
-		stamp = time.Now().In(loc)
-	}
-	stampLabel := fmt.Sprintf("%s CT", stamp.Format("Mon Jan 2, 2006 3:04 PM"))
+	stamp := time.Now()
+	stampLabel := formatTimestamp(stamp)
 	if pr != 0 {
 		done = append(done, fmt.Sprintf("PR #%d", pr))
 	}

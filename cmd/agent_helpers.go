@@ -20,12 +20,9 @@ func shortSessionID() string {
 }
 
 func formatTimestamp(t time.Time) string {
-	stamp := t.UTC()
-	loc, err := time.LoadLocation("America/Chicago")
-	if err == nil {
-		stamp = t.In(loc)
-	}
-	return fmt.Sprintf("%s CT", stamp.Format("Mon Jan 2, 2006 3:04 PM"))
+	stamp := t.Local()
+	zone, _ := stamp.Zone()
+	return fmt.Sprintf("%s %s", stamp.Format("Mon Jan 2, 2006 3:04 PM"), zone)
 }
 
 func findStatusOption(options map[string]string, names ...string) (string, bool) {

@@ -87,12 +87,8 @@ func runHandoff(cmd *cobra.Command, args []string) error {
 }
 
 func buildHandoffComment(sessionID string) (string, time.Time) {
-	stamp := time.Now().UTC()
-	loc, err := time.LoadLocation("America/Chicago")
-	if err == nil {
-		stamp = time.Now().In(loc)
-	}
-	stampLabel := fmt.Sprintf("%s CT", stamp.Format("Mon Jan 2, 2006 3:04 PM"))
+	stamp := time.Now()
+	stampLabel := formatTimestamp(stamp)
 	var builder strings.Builder
 	builder.WriteString("## 🔄 Session Handoff\n\n")
 	builder.WriteString(fmt.Sprintf("**Session:** %s | **Time:** %s\n\n", sessionID, stampLabel))
