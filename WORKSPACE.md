@@ -42,7 +42,7 @@
 ## Removed for v1 (Open-Source Prep)
 
 The following commands were removed to reduce surface area for the initial open-source release.
-The full code is preserved in PR #XX (closed, not merged) on the `agent-orchestration` branch.
+The full code is preserved in [PR #43](https://github.com/maxbeizer/gh-planning/pull/43) (closed, not merged) on the `agent-orchestration` branch.
 
 ### Agent orchestration commands
 Removed because they represent a separate concern (AI agent coordination) that adds complexity for users who just want project visibility and daily workflow tools.
