@@ -107,14 +107,10 @@ func suggestSkill(query string) skillSuggestion {
 		return skillSuggestion{Skill: "standup", Command: "gh planning standup --json", Reason: "standup-related query"}
 	case strings.Contains(q, "catch") || strings.Contains(q, "miss"):
 		return skillSuggestion{Skill: "catch-up", Command: "gh planning catch-up --json", Reason: "catch-up summary query"}
-	case strings.Contains(q, "break") || strings.Contains(q, "split"):
-		return skillSuggestion{Skill: "breakdown", Command: "gh planning breakdown {issue} --json", Reason: "issue breakdown query"}
 	case strings.Contains(q, "1-1") || strings.Contains(q, "one on one") || strings.Contains(q, "prep"):
 		return skillSuggestion{Skill: "team-prep", Command: "gh planning prep {handle} --json", Reason: "1-1 prep query"}
 	case strings.Contains(q, "pulse") || strings.Contains(q, "team"):
 		return skillSuggestion{Skill: "team-prep", Command: "gh planning team --json", Reason: "team dashboard query"}
-	case strings.Contains(q, "agent") || strings.Contains(q, "queue") || strings.Contains(q, "claim") || strings.Contains(q, "complete"):
-		return skillSuggestion{Skill: "agent-ops", Command: "gh planning agent-context --json", Reason: "agent operations query"}
 	case strings.Contains(q, "status") || strings.Contains(q, "blocked") || strings.Contains(q, "stale") || strings.Contains(q, "backlog"):
 		return skillSuggestion{Skill: "project-status", Command: "gh planning status --json", Reason: "project status query"}
 	default:

@@ -18,10 +18,8 @@ var guideCmd = &cobra.Command{
 
 Available workflows:
   morning      Morning catch-up → standup → board review
-  new-task     Track → claim → focus → log → complete
+  new-task     Track → focus → log → unfocus
   one-on-one   Team activity → 1-1 prep → health metrics
-  agent        Agent context → queue → breakdown → MCP
-  breakdown    Preview → create sub-issues → estimate
 
 Run with no arguments to see all available workflows.`,
 	Aliases:          []string{"guides", "workflow"},

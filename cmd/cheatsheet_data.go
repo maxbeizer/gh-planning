@@ -38,14 +38,6 @@ func cheatsheetItems() []tui.ListItem {
 		// Starting a Task
 		{
 			Category:    "🎯 Starting a Task",
-			Title:       "Claim an issue",
-			Command:     "gh planning claim",
-			Description: "Assign yourself and move the issue to In Progress in one step.",
-			Example:     "gh planning claim maxbeizer/app#42",
-			DocURL:      "https://docs.github.com/en/issues/tracking-your-work-with-issues",
-		},
-		{
-			Category:    "🎯 Starting a Task",
 			Title:       "Focus on an issue",
 			Command:     "gh planning focus",
 			Description: "Set your active focus issue. Tracks elapsed time automatically.",
@@ -58,14 +50,6 @@ func cheatsheetItems() []tui.ListItem {
 			Description: "Create an issue and add it to your project board in one command.",
 			Example:     `gh planning track "Fix auth bug" --repo maxbeizer/app --status "In Progress"`,
 		},
-		{
-			Category:    "🎯 Starting a Task",
-			Title:       "Find work to pick up",
-			Command:     "gh planning queue",
-			Description: "Show items ready for processing, filtered by label or status.",
-			Example:     "gh planning queue --label agent-ready --status Backlog",
-		},
-
 		// During Work
 		{
 			Category:    "📝 During Work",
@@ -94,14 +78,6 @@ func cheatsheetItems() []tui.ListItem {
 			Command:     "gh planning logs",
 			Description: "Show the timeline of logged progress entries.",
 			Example:     "gh planning logs --all --since 7d",
-		},
-		{
-			Category:    "📝 During Work",
-			Title:       "Break down a large issue",
-			Command:     "gh planning breakdown",
-			Description: "Use AI to split a big issue into actionable sub-issues.",
-			Example:     "gh planning breakdown 42 --repo maxbeizer/app --dry-run",
-			DocURL:      "https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-sub-issues",
 		},
 		{
 			Category:    "📝 During Work",
@@ -134,38 +110,9 @@ func cheatsheetItems() []tui.ListItem {
 			Description: "Show velocity, throughput, and staleness metrics for your team.",
 			Example:     "gh planning pulse --since 30d",
 		},
+		// Copilot Integration
 		{
-			Category:    "🤝 Collaboration",
-			Title:       "Hand off to the next session",
-			Command:     "gh planning handoff",
-			Description: "Post a structured handoff comment to an issue for the next person.",
-			Example:     `gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout"`,
-		},
-
-		// AI & Agents
-		{
-			Category:    "🤖 AI & Agents",
-			Title:       "Get agent context",
-			Command:     "gh planning agent-context",
-			Description: "Summarize everything an AI agent needs to start work on your project.",
-			Example:     "gh planning agent-context --new-session",
-		},
-		{
-			Category:    "🤖 AI & Agents",
-			Title:       "View agent work queue",
-			Command:     "gh planning queue",
-			Description: "Show items labeled for agent processing.",
-			Example:     "gh planning queue --label agent-ready",
-		},
-		{
-			Category:    "🤖 AI & Agents",
-			Title:       "Break down with AI",
-			Command:     "gh planning breakdown",
-			Description: "Use GitHub Models to split issues into sub-issues automatically.",
-			Example:     "gh planning breakdown 42 --repo maxbeizer/app",
-		},
-		{
-			Category:    "🤖 AI & Agents",
+			Category:    "🤖 Copilot Integration",
 			Title:       "Start MCP server for Copilot",
 			Command:     "gh planning copilot serve",
 			Description: "Launch the MCP server so Copilot can use gh-planning as a tool.",
@@ -173,13 +120,6 @@ func cheatsheetItems() []tui.ListItem {
 		},
 
 		// Wrapping Up
-		{
-			Category:    "🏁 Wrapping Up",
-			Title:       "Complete an issue",
-			Command:     "gh planning complete",
-			Description: "Post a completion handoff and move the issue forward.",
-			Example:     `gh planning complete maxbeizer/app#42 --done "OAuth flow" --pr 48`,
-		},
 		{
 			Category:    "🏁 Wrapping Up",
 			Title:       "Clear your focus",

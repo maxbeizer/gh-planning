@@ -34,13 +34,6 @@ func (r *tutorialRunner) runHandsOnTour() error {
 			run:     r.stepTrackIssue,
 		},
 		{
-			id:         "handson-claim",
-			title:      "Claim the Issue",
-			needsIssue: true,
-			explain:    "Now let's claim it — this assigns it to you and moves it to\n  In Progress.",
-			run:        r.stepClaimIssue,
-		},
-		{
 			id:         "handson-focus",
 			title:      "Focus On It",
 			needsIssue: true,
@@ -59,13 +52,6 @@ func (r *tutorialRunner) runHandsOnTour() error {
 			title:   "Generate a Standup",
 			explain: "Now let's generate a standup report — it pulls from your actual\n  GitHub activity.",
 			run:     r.stepStandup,
-		},
-		{
-			id:         "handson-complete",
-			title:      "Complete the Issue",
-			needsIssue: true,
-			explain:    "Let's wrap up by completing the issue — this posts a summary and\n  moves it forward.",
-			run:        r.stepCompleteIssue,
 		},
 		{
 			id:         "handson-cleanup",
@@ -127,11 +113,9 @@ func (r *tutorialRunner) runHandsOnTour() error {
 	fmt.Println("    " + tui.Command.Render("gh planning") + "           — your dashboard")
 	fmt.Println("    " + tui.Command.Render("gh planning board") + "     — kanban view")
 	fmt.Println("    " + tui.Command.Render("gh planning track") + "     — create & track issues")
-	fmt.Println("    " + tui.Command.Render("gh planning claim") + "     — claim an issue")
 	fmt.Println("    " + tui.Command.Render("gh planning focus") + "     — start a focus session")
 	fmt.Println("    " + tui.Command.Render("gh planning log") + "       — log progress")
 	fmt.Println("    " + tui.Command.Render("gh planning standup") + "   — generate reports")
-	fmt.Println("    " + tui.Command.Render("gh planning complete") + "  — wrap up work")
 	fmt.Println()
 	fmt.Println("  Next: " + tui.Command.Render("gh planning cheatsheet") + " to explore all commands,")
 	fmt.Println("  or " + tui.Command.Render("gh planning guide <workflow>") + " for specific workflows.")

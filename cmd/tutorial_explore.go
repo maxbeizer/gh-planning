@@ -82,7 +82,7 @@ func (r *tutorialRunner) runExploreTour() error {
 	fmt.Println()
 	fmt.Println("  Ready to go deeper? Try " + tui.Command.Render("gh planning tutorial --hands-on"))
 	fmt.Println("  to create a real issue and walk through the full lifecycle:")
-	fmt.Println("  track → claim → focus → log → complete.")
+	fmt.Println("  track → focus → log → unfocus.")
 	fmt.Println()
 	fmt.Println("  Or browse commands with " + tui.Command.Render("gh planning cheatsheet"))
 	return nil

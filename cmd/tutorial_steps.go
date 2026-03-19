@@ -93,21 +93,6 @@ func (r *tutorialRunner) stepTrackIssue() error {
 	return nil
 }
 
-func (r *tutorialRunner) stepClaimIssue() error {
-	if r.createdIssueRef == "" {
-		return fmt.Errorf("no tutorial issue to claim — run the track step first")
-	}
-
-	r.printCommandBox("gh planning claim " + r.createdIssueRef)
-	r.promptConfirm("Press enter to claim the issue")
-
-	r.runAndShow("gh", "planning", "claim", r.createdIssueRef)
-	fmt.Println()
-	fmt.Println(tui.Muted.Render("  ↑ You're now assigned and the issue moved to In Progress."))
-	fmt.Println(tui.Muted.Render("    Claiming = assign + status update in one command."))
-	return nil
-}
-
 func (r *tutorialRunner) stepFocusIssue() error {
 	if r.createdIssueRef == "" {
 		return fmt.Errorf("no tutorial issue to focus on")
@@ -119,7 +104,7 @@ func (r *tutorialRunner) stepFocusIssue() error {
 	r.runAndShow("gh", "planning", "focus", r.createdIssueRef)
 	fmt.Println()
 	fmt.Println(tui.Muted.Render("  ↑ Focus mode is now tracking your time on this issue."))
-	fmt.Println(tui.Muted.Render("    Other commands (log, handoff, complete) are now context-aware."))
+	fmt.Println(tui.Muted.Render("    Other commands (like log) are now context-aware."))
 	return nil
 }
 
@@ -147,22 +132,6 @@ func (r *tutorialRunner) stepLogProgress() error {
 	fmt.Println()
 	fmt.Println(tui.Muted.Render("  ↑ Logs create a breadcrumb trail of your work. They show up in"))
 	fmt.Println(tui.Muted.Render("    standup reports and handoff summaries automatically."))
-	return nil
-}
-
-func (r *tutorialRunner) stepCompleteIssue() error {
-	if r.createdIssueRef == "" {
-		return fmt.Errorf("no tutorial issue to complete")
-	}
-
-	r.printCommandBox("gh planning complete " + r.createdIssueRef + ` --done "Walked through the full gh-planning lifecycle"`)
-	r.promptConfirm("Press enter to complete the issue")
-
-	r.runAndShow("gh", "planning", "complete", r.createdIssueRef,
-		"--done", "Walked through the full gh-planning lifecycle")
-	fmt.Println()
-	fmt.Println(tui.Muted.Render("  ↑ This posted a structured summary to the issue and moved it forward."))
-	fmt.Println(tui.Muted.Render("    Focus session was also cleared automatically."))
 	return nil
 }
 

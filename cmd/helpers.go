@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	neturl "net/url"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/maxbeizer/gh-planning/internal/config"
+	"github.com/maxbeizer/gh-planning/internal/github"
 )
 
 // projectConfig holds the resolved project owner, number, and full config.
@@ -182,4 +184,30 @@ func parseIssueURL(rawURL string) (string, int, error) {
 		return "", 0, fmt.Errorf("invalid issue number in URL")
 	}
 	return repo, number, nil
+}
+
+func findStatusOption(options map[string]string, names ...string) (string, bool) {
+for _, name := range names {
+for optionName, optionID := range options {
+if strings.EqualFold(optionName, name) {
+return optionID, true
+}
+}
+}
+return "", false
+}
+
+func findProjectItemID(ctx context.Context, owner string, project int, repo string, number int) (string, error) {
+projectData, err := github.GetProject(ctx, owner, project)
+if err != nil {
+return "", err
+}
+for _, items := range projectData.Items {
+for _, item := range items {
+if item.Number == number && strings.EqualFold(item.Repository, repo) {
+return item.ID, nil
+}
+}
+}
+return "", fmt.Errorf("issue not found in project")
 }
