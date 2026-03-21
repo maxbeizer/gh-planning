@@ -1,7 +1,7 @@
-project_name: gh-planning
+project_name: gh-extension-template
 
 builds:
-  - binary: gh-planning
+  - binary: gh-extension-template
     goos:
       - darwin
       - linux
