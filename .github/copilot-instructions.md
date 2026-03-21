@@ -1,70 +1,109 @@
-# Copilot Instructions for gh-planning
+# Copilot Instructions for gh-extension-template
 
 ## Project Overview
+This is a Go-based GitHub CLI extension that demonstrates best practices for building extensible CLI tools. The project uses the `gh` CLI extension framework and follows modern Go development patterns.
 
-`gh-planning` is a GitHub CLI extension (`gh planning`) written in Go. It provides a developer command center for GitHub-native project management — tracking issues, generating standups, managing focus sessions, breaking down issues, coordinating team activity, and integrating with Copilot via MCP.
+## Technology Stack
+- **Language**: Go
+- **Framework**: GitHub CLI (gh) extension framework  
+- **Testing**: Go standard library testing package
 
-## Repository Structure
+## Go Development Guidelines
 
+### Code Organization
+- Follow Go project layout conventions (main package in root, reusable code in subdirectories)
+- Use the `go mod` system for dependency management
+- Organize packages by functionality, not by layer
+
+### Go Idioms and Standard Library
+- Use the Go standard library exclusively where possible (avoid external dependencies)
+- Follow idiomatic Go patterns:
+  - Use interfaces for abstraction and testability
+  - Prefer composition over inheritance
+  - Use goroutines and channels for concurrency
+  - Handle errors explicitly, no exceptions
+  - Use defer for resource cleanup
+- Return errors as the last return value: `(result Type, err error)`
+
+### Naming Conventions
+- **Variables and Functions**: Use camelCase for unexported, PascalCase for exported
+- **Constants**: Use ALL_CAPS for package-scoped constants
+- **Packages**: Use short, lowercase names (single word where possible)
+- **Receivers**: Use short 1-2 letter names like `f`, `s`, `r` for receiver variables
+- **Methods**: Name methods by their action and what they return (e.g., `GetConfig()`, `IsValid()`)
+
+### Testing
+- Write table-driven tests for comprehensive coverage:
+  - Define test cases as a slice of anonymous structs
+  - Include input, expected output, and error conditions
+  - Use subtests with `t.Run()` for better test isolation and reporting
+- Test file naming: `*_test.go` in the same package
+- Aim for high coverage, especially for CLI argument parsing and core logic
+
+### Example Table-Driven Test Pattern
+```go
+func TestFunctionName(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   string
+        want    string
+        wantErr bool
+    }{
+        {"valid input", "example", "output", false},
+        {"invalid input", "", "", true},
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            got, err := FunctionName(tt.input)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("FunctionName() error = %v, wantErr %v", err, tt.wantErr)
+            }
+            if got != tt.want {
+                t.Errorf("FunctionName() = %v, want %v", got, tt.want)
+            }
+        })
+    }
+}
 ```
-main.go                  → entry point, signal handling
-cmd/                     → cobra commands (one file per command)
-  root.go                → root command, global flags
-  setup.go               → interactive first-time setup
-  status.go              → project status (list view)
-  board.go               → kanban/swimlane rendering functions
-  board_cmd.go           → standalone board command
-  standup.go             → standup report generation
-  agent_context.go       → agent session-start context
-  log.go                 → progress logging
-  claim.go / complete.go → agent work lifecycle
-  handoff.go             → structured handoffs
-  queue.go               → agent work queue
-  config.go              → config management + profiles
-  helpers.go             → shared utilities
-  agent_helpers.go       → agent-specific helpers
-internal/
-  config/                → YAML config with named profiles
-  github/                → gh CLI wrapper (GraphQL, REST, search)
-  session/               → focus session tracking (current.json)
-  state/                 → persistent state (handoffs, logs)
-  output/                → JSON output formatting
-copilot-skills/          → markdown skill definitions
-mcp/                     → MCP server for Copilot tool registration
-docs/                    → guide and agent instructions
-```
 
-## Build & Run
+## GitHub CLI Extension Patterns
 
-```bash
-make build        # produces bin/gh-planning
-make ci           # build + vet + test-race
-make relink-local # reinstall extension from local checkout
-make help         # see all targets
-go mod tidy       # resolve dependency issues
-```
+### Key Extension Framework Concepts
+- Use `github.com/cli/go-gh` for interacting with the GitHub API
+- Leverage the `cmdutil` package for common CLI patterns
+- Use `flag.FlagSet` for command-line argument parsing
+- Follow the standard Go CLI pattern: `command -> subcommand -> flags`
 
-## Conventions
+### Command Structure
+- Create a main command that handles core functionality
+- Use subcommands for different operational modes
+- Support `--help` and `-h` flags automatically
+- Provide clear, concise error messages for users
+- Use exit codes appropriately (0 for success, 1 for general errors)
 
-- **CLI framework**: [cobra](https://github.com/spf13/cobra) — each command is a file in `cmd/`.
-- **Config**: YAML-based with named profiles, managed via `internal/config`. Stored at `~/.config/gh-planning/config.yaml`.
-- **State**: JSON at `~/.config/gh-planning/state.json` (handoffs, progress logs).
-- **Cache**: Project data cached at `~/Library/Caches/gh-planning/` with 2-minute TTL.
-- **GitHub API calls**: Use the `gh` CLI under the hood (shelling out via `exec.Command`), not the Go API client.
-- **Output**: Support `--json` and `--jq` global flags on all commands.
-- **Error handling**: Return errors up to `main`; avoid `os.Exit` in commands.
-- **Tests**: Standard `go test` with `_test.go` files alongside the code they test.
-- **Emoji alignment**: Use `github.com/mattn/go-runewidth` for terminal column math, never `len()`.
+### Configuration and Flags
+- Support both flags and configuration files when appropriate
+- Use environment variables for sensitive data (following gh CLI conventions)
+- Validate all inputs before processing
+- Provide sensible defaults
 
-## Adding a New Command
+## Development Workflow
 
-1. Create `cmd/<command>.go` with a `cobra.Command`.
-2. Register it in `cmd/root.go` via `rootCmd.AddCommand(...)`.
-3. If the command should be exposed as a Copilot skill, add a markdown file in `copilot-skills/` and register it in `mcp/tools.go`.
+### Building and Running
+- Build: `go build -o gh-extension-template ./cmd/...` or use Makefile
+- Run: `./gh-extension-template` or through gh CLI: `gh extension-template <command>`
+- Test: `go test ./...`
+- Coverage: `go test -cover ./...`
 
-## Style
+### Code Quality
+- Run gofmt before committing: `gofmt -w .`
+- Use golint or golangci-lint for linting
+- Ensure all tests pass
+- Keep functions focused and small (aim for < 50 lines)
+- Write clear comments for exported functions and types
 
-- Keep commands self-contained in their own file.
-- Prefer helper functions in `cmd/helpers.go` or `cmd/agent_helpers.go` for reusable logic.
-- Use `fmt.Fprintf(cmd.OutOrStdout(), ...)` for output so it can be captured in tests.
-- Parallelize independent API calls using goroutines + channels (see `standup.go`, `catchup.go` for patterns).
+## Documentation
+- Document exported functions and types with comment strings
+- Include examples in function documentation where helpful
+- Update README.md for user-facing changes
+- Document command-line flags and their usage
