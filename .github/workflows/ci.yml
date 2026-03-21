@@ -4,31 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ["1.23.x", "1.24.x"]
-
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Verify go.sum is tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
-
-      - name: Build
-        run: go build .
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Test
-        run: go test -race ./...
+          go-version-file: go.mod
+      - run: make ci
