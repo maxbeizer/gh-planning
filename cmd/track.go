@@ -55,7 +55,7 @@ func runTrack(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--repo is required when not in a git repository")
 	}
 	title := args[0]
-	argsCreate := []string{"issue", "create", "--repo", trackOpts.Repo, "--title", title, "--json", "id,number,url,repository"}
+	argsCreate := []string{"issue", "create", "--repo", trackOpts.Repo, "--title", title}
 	if trackOpts.Body != "" {
 		argsCreate = append(argsCreate, "--body", trackOpts.Body)
 	}
@@ -68,7 +68,14 @@ func runTrack(cmd *cobra.Command, args []string) error {
 	if trackOpts.Assignee != "" {
 		argsCreate = append(argsCreate, "--assignee", trackOpts.Assignee)
 	}
-	issuePayload, err := github.Run(cmd.Context(), argsCreate...)
+	createOut, err := github.Run(cmd.Context(), argsCreate...)
+	if err != nil {
+		return err
+	}
+	issueURL := strings.TrimSpace(string(createOut))
+
+	// gh issue create only returns the URL; fetch structured data with gh issue view
+	issuePayload, err := github.Run(cmd.Context(), "issue", "view", issueURL, "--json", "id,number,url,repository")
 	if err != nil {
 		return err
 	}
