@@ -224,3 +224,16 @@ func splitAndTrim(value string) []string {
 	}
 	return result
 }
+
+// filterNonGlobRepos returns repos that are exact owner/repo references,
+// filtering out glob patterns (e.g. "github/*") that can't be used in
+// GitHub search queries.
+func filterNonGlobRepos(repos []string) []string {
+	result := make([]string, 0, len(repos))
+	for _, r := range repos {
+		if !strings.Contains(r, "*") && !strings.Contains(r, "?") && strings.Contains(r, "/") {
+			result = append(result, r)
+		}
+	}
+	return result
+}

@@ -357,8 +357,35 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
-func TestFindStatusOption(t *testing.T) {
-	options := map[string]string{
+func TestFilterNonGlobRepos(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []string
+		want  []string
+	}{
+		{"exact repos only", []string{"owner/repo", "org/project"}, []string{"owner/repo", "org/project"}},
+		{"filters globs", []string{"owner/repo", "github/*", "org/?"}, []string{"owner/repo"}},
+		{"filters bare names", []string{"just-a-name", "owner/repo"}, []string{"owner/repo"}},
+		{"empty input", nil, []string{}},
+		{"all globs", []string{"*/*", "org/*"}, []string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := filterNonGlobRepos(tt.input)
+			if len(got) != len(tt.want) {
+				t.Errorf("filterNonGlobRepos(%v) = %v, want %v", tt.input, got, tt.want)
+				return
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("filterNonGlobRepos(%v)[%d] = %q, want %q", tt.input, i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestFindStatusOption(t *testing.T) {	options := map[string]string{
 		"In Progress": "opt-1",
 		"Done":        "opt-2",
 		"Backlog":     "opt-3",
