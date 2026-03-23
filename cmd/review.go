@@ -103,7 +103,7 @@ func runReview(cmd *cobra.Command, args []string) error {
 			"details": pr,
 			"summary": summary,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	w := cmd.OutOrStdout()

@@ -3,12 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/maxbeizer/gh-planning/internal/github"
 	"github.com/maxbeizer/gh-planning/internal/output"
 	"github.com/spf13/cobra"
@@ -71,7 +72,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			"number": pc.Project,
 			"items":  filtered,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "📊 Project: %s (#%d)\n", projectData.Title, pc.Project)
@@ -79,12 +80,12 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	if statusOpts.Board || statusOpts.Swimlanes {
 		if statusOpts.Swimlanes {
-			printSwimlaneBoardView(filtered)
+			printSwimlaneBoardView(cmd.OutOrStdout(), filtered)
 		} else {
-			printBoardView(filtered)
+			printBoardView(cmd.OutOrStdout(), filtered)
 		}
 	} else {
-		printStatusGroups(filtered, staleDuration)
+		printStatusGroups(cmd.OutOrStdout(), filtered, staleDuration)
 	}
 	return nil
 }
@@ -121,7 +122,7 @@ func filterProjectItems(project *github.Project, assignee string, stale time.Dur
 	return filtered
 }
 
-func printStatusGroups(groups map[string][]github.ProjectItem, stale time.Duration) {
+func printStatusGroups(w io.Writer, groups map[string][]github.ProjectItem, stale time.Duration) {
 	statuses := make([]string, 0, len(groups))
 	for status := range groups {
 		statuses = append(statuses, status)
@@ -133,8 +134,8 @@ func printStatusGroups(groups map[string][]github.ProjectItem, stale time.Durati
 			continue
 		}
 		header := fmt.Sprintf("%s (%d)", status, len(items))
-		fmt.Printf("%s\n", decorateStatus(status, header))
-		w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+		fmt.Fprintf(w, "%s\n", decorateStatus(status, header))
+		tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
 		for _, item := range items {
 			assignee := "—"
 			if len(item.Assignees) > 0 {
@@ -148,10 +149,12 @@ func printStatusGroups(groups map[string][]github.ProjectItem, stale time.Durati
 			if item.URL != "" {
 				issueNum = hyperlink(item.URL, issueNum)
 			}
-			fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s%s\n", issueNum, truncate(item.Title, 28), item.Repository, assignee, humanizeDuration(time.Since(item.UpdatedAt)), staleMark)
+			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s%s\n", issueNum, truncate(item.Title, 28), item.Repository, assignee, humanizeDuration(time.Since(item.UpdatedAt)), staleMark)
 		}
-		w.Flush()
-		fmt.Println()
+		if err := tw.Flush(); err != nil {
+			fmt.Fprintf(w, "  (flush error: %v)\n", err)
+		}
+		fmt.Fprintln(w)
 	}
 }
 
@@ -171,10 +174,10 @@ func decorateStatus(status, header string) string {
 }
 
 func truncate(value string, max int) string {
-	if len(value) <= max {
+	if runewidth.StringWidth(value) <= max {
 		return value
 	}
-	return value[:max-1] + "…"
+	return runewidth.Truncate(value, max, "…")
 }
 
 func buildStatusSummary(ctx context.Context, owner string, project int) (string, error) {

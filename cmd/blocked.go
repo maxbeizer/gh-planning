@@ -90,7 +90,7 @@ func runBlocked(cmd *cobra.Command, args []string) error {
 			"comment":   comment,
 			"time":      now,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Marked %s as blocked by %s\n", blockedRef, byRef)
@@ -124,7 +124,7 @@ func runUnblock(cmd *cobra.Command, args []string) error {
 			"unblocked": ref,
 			"comment":   comment,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Unblocked %s\n", ref)

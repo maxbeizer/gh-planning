@@ -74,16 +74,16 @@ func runBoard(cmd *cobra.Command, args []string) error {
 			"number": pc.Project,
 			"items":  filtered,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "📊 Project: %s (#%d)\n", projectData.Title, pc.Project)
 	fmt.Fprintf(cmd.OutOrStdout(), "   %s\n\n", projectURL(pc.Owner, pc.Project))
 
 	if boardOpts.Swimlanes {
-		printSwimlaneBoardView(filtered)
+		printSwimlaneBoardView(cmd.OutOrStdout(), filtered)
 	} else {
-		printBoardView(filtered)
+		printBoardView(cmd.OutOrStdout(), filtered)
 	}
 	return nil
 }
