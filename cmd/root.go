@@ -77,7 +77,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 			"focus":         focus,
 			"statusSummary": statusSummary,
 		}
-		return output.PrintJSON(payload, rootOpts)
+		return output.PrintJSON(cmd.OutOrStdout(), payload, rootOpts)
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "gh-planning — developer command center")

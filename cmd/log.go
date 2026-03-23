@@ -87,7 +87,7 @@ func runLog(cmd *cobra.Command, args []string) error {
 	}
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
-		return output.PrintJSON(entry, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), entry, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s] %s (%s)\n", prefix, kind, message, focus.Issue)
@@ -139,7 +139,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
-		return output.PrintJSON(entries, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), entries, OutputOptions())
 	}
 
 	if len(entries) == 0 {

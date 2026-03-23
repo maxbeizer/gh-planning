@@ -180,7 +180,7 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 			"label":    label,
 			"sections": sections,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "📬 Catch-up — since %s\n\n", label)
