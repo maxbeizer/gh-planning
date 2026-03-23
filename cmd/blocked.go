@@ -25,14 +25,6 @@ var blockedCmd = &cobra.Command{
 	RunE:  runBlocked,
 }
 
-func init() {
-	blockedCmd.Flags().StringVar(&blockedOpts.By, "by", "", "Issue that is blocking (required)")
-	blockedCmd.Flags().StringVar(&blockedOpts.Repo, "repo", "", "Repository (owner/repo)")
-	blockedCmd.Flags().StringVar(&blockedOpts.Owner, "owner", "", "Project owner")
-	blockedCmd.Flags().IntVar(&blockedOpts.Project, "project", 0, "Project number")
-	_ = blockedCmd.MarkFlagRequired("by")
-}
-
 var unblockCmd = &cobra.Command{
 	Use:   "unblock <issue>",
 	Short: "Remove a block from an issue",
@@ -41,6 +33,12 @@ var unblockCmd = &cobra.Command{
 }
 
 func init() {
+	blockedCmd.Flags().StringVar(&blockedOpts.By, "by", "", "Issue that is blocking (required)")
+	blockedCmd.Flags().StringVar(&blockedOpts.Repo, "repo", "", "Repository (owner/repo)")
+	blockedCmd.Flags().StringVar(&blockedOpts.Owner, "owner", "", "Project owner")
+	blockedCmd.Flags().IntVar(&blockedOpts.Project, "project", 0, "Project number")
+	_ = blockedCmd.MarkFlagRequired("by")
+
 	unblockCmd.Flags().StringVar(&blockedOpts.Repo, "repo", "", "Repository (owner/repo)")
 }
 
