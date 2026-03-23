@@ -87,7 +87,7 @@ func runStandup(cmd *cobra.Command, args []string) error {
 
 	results := []standupData{}
 	for _, user := range users {
-		data, err := buildStandup(cmd.Context(), user, sinceTime, projectData)
+		data, err := buildStandup(cmd.Context(), user, sinceTime, projectData, pc.Cfg.Repos)
 		if err != nil {
 			return err
 		}
@@ -118,8 +118,17 @@ func runStandup(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildStandup(ctx context.Context, user string, since time.Time, project *github.Project) (standupData, error) {
+func buildStandup(ctx context.Context, user string, since time.Time, project *github.Project, profileRepos []string) (standupData, error) {
 	queryDate := since.Format(time.RFC3339)
+
+	// Scope searches to profile repos if configured, otherwise project repos.
+	// Profile repos may contain globs (e.g. "github/*") which can't be used
+	// in search queries, so filter those out.
+	repos := filterNonGlobRepos(profileRepos)
+	if len(repos) == 0 {
+		repos = uniqueRepos(project)
+	}
+	repoQuery := buildRepoQuery(repos)
 
 	type searchResult struct {
 		items []github.SearchIssue
@@ -131,15 +140,15 @@ func buildStandup(ctx context.Context, user string, since time.Time, project *gi
 	reviewCh := make(chan searchResult, 1)
 
 	go func() {
-		items, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:merged merged:>%s", user, queryDate))
+		items, err := github.SearchIssues(ctx, composeQuery(repoQuery, fmt.Sprintf("author:%s type:pr is:merged merged:>%s", user, queryDate)))
 		mergedCh <- searchResult{items, err}
 	}()
 	go func() {
-		items, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:issue is:closed closed:>%s", user, queryDate))
+		items, err := github.SearchIssues(ctx, composeQuery(repoQuery, fmt.Sprintf("author:%s type:issue is:closed closed:>%s", user, queryDate)))
 		closedCh <- searchResult{items, err}
 	}()
 	go func() {
-		items, err := github.SearchIssues(ctx, fmt.Sprintf("author:%s type:pr is:open review:required", user))
+		items, err := github.SearchIssues(ctx, composeQuery(repoQuery, fmt.Sprintf("author:%s type:pr is:open review:required", user)))
 		reviewCh <- searchResult{items, err}
 	}()
 

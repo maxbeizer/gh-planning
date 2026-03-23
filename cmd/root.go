@@ -64,6 +64,18 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Resolve active profile name (explicit or auto-detected)
+	profileName := ""
+	explicitProfile, _ := config.ActiveProfileName()
+	detected := false
+	if explicitProfile != "" {
+		profileName = explicitProfile
+	} else if matches, _ := config.DetectProfile(); len(matches) == 1 {
+		profileName = matches[0].Name
+		detected = true
+	}
+
 	statusSummary := ""
 	if cfg.DefaultOwner != "" && cfg.DefaultProject != 0 {
 		summary, err := buildStatusSummary(cmd.Context(), cfg.DefaultOwner, cfg.DefaultProject)
@@ -77,39 +89,61 @@ func runRoot(cmd *cobra.Command, args []string) error {
 			"focus":         focus,
 			"statusSummary": statusSummary,
 		}
+		if profileName != "" {
+			payload["profile"] = profileName
+		}
+		if cfg.DefaultOwner != "" && cfg.DefaultProject != 0 {
+			payload["project"] = map[string]interface{}{
+				"owner":  cfg.DefaultOwner,
+				"number": cfg.DefaultProject,
+			}
+		}
 		return output.PrintJSON(cmd.OutOrStdout(), payload, rootOpts)
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout(), "gh-planning — developer command center")
-	fmt.Fprintln(cmd.OutOrStdout())
+	w := cmd.OutOrStdout()
+	fmt.Fprintln(w, "gh-planning — developer command center")
+	fmt.Fprintln(w)
+
+	// Show active profile and project
+	if profileName != "" {
+		if detected && profileName != explicitProfile {
+			fmt.Fprintf(w, "📂 Profile: %s (auto-detected)\n", profileName)
+		} else {
+			fmt.Fprintf(w, "📂 Profile: %s\n", profileName)
+		}
+	}
+	if cfg.DefaultOwner != "" && cfg.DefaultProject != 0 {
+		fmt.Fprintf(w, "📋 Project: %s #%d\n", cfg.DefaultOwner, cfg.DefaultProject)
+	}
 
 	if focus != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "🎯 Focus: %s (%s)\n", focus.Issue, humanizeDuration(focus.Elapsed()))
+		fmt.Fprintf(w, "🎯 Focus: %s (%s)\n", focus.Issue, humanizeDuration(focus.Elapsed()))
 	} else {
-		fmt.Fprintln(cmd.OutOrStdout(), "🎯 Focus: none")
+		fmt.Fprintln(w, "🎯 Focus: none")
 	}
 	if statusSummary != "" {
-		fmt.Fprintf(cmd.OutOrStdout(), "📊 %s\n", statusSummary)
+		fmt.Fprintf(w, "📊 %s\n", statusSummary)
 	} else if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
-		fmt.Fprintln(cmd.OutOrStdout(), "📊 No project configured")
+		fmt.Fprintln(w, "📊 No project configured")
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout())
+	fmt.Fprintln(w)
 	if focus != nil {
-		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning log \"message\"    — log progress")
-		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning unfocus          — clear focus")
+		fmt.Fprintln(w, "  gh planning log \"message\"    — log progress")
+		fmt.Fprintln(w, "  gh planning unfocus          — clear focus")
 	} else {
-		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning status           — view your project board")
-		fmt.Fprintln(cmd.OutOrStdout(), "  gh planning focus <issue>    — start focusing on an issue")
+		fmt.Fprintln(w, "  gh planning status           — view your project board")
+		fmt.Fprintln(w, "  gh planning focus <issue>    — start focusing on an issue")
 	}
-	fmt.Fprintln(cmd.OutOrStdout(), "  gh planning standup          — generate a standup report")
-	fmt.Fprintln(cmd.OutOrStdout())
-	fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning --help` for all commands.")
+	fmt.Fprintln(w, "  gh planning standup          — generate a standup report")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Run `gh planning --help` for all commands.")
 	if cfg.DefaultOwner == "" || cfg.DefaultProject == 0 {
-		fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning setup` to get started.")
-		fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning tutorial` for an interactive walkthrough.")
+		fmt.Fprintln(w, "Run `gh planning setup` to get started.")
+		fmt.Fprintln(w, "Run `gh planning tutorial` for an interactive walkthrough.")
 	} else {
-		fmt.Fprintln(cmd.OutOrStdout(), "Run `gh planning cheatsheet` to browse commands by scenario.")
+		fmt.Fprintln(w, "Run `gh planning cheatsheet` to browse commands by scenario.")
 	}
 	return nil
 }
