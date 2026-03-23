@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -71,10 +72,10 @@ func statusEmoji(status string) string {
 }
 
 // printBoardView renders a kanban board with columns per status.
-func printBoardView(groups map[string][]github.ProjectItem) {
+func printBoardView(w io.Writer, groups map[string][]github.ProjectItem) {
 	statuses := sortedStatuses(groups)
 	if len(statuses) == 0 {
-		fmt.Println("  (no items)")
+		fmt.Fprintln(w, "  (no items)")
 		return
 	}
 
@@ -142,21 +143,21 @@ func printBoardView(groups map[string][]github.ProjectItem) {
 	for i := range topParts {
 		topParts[i] = strings.Repeat("─", innerWidth+2)
 	}
-	fmt.Printf("┌%s┐\n", strings.Join(topParts, "┬"))
+	fmt.Fprintf(w, "┌%s┐\n", strings.Join(topParts, "┬"))
 
 	// Header row
 	headerParts := make([]string, numCols)
 	for col := range columns {
 		headerParts[col] = " " + columns[col][0] + " "
 	}
-	fmt.Printf("│%s│\n", strings.Join(headerParts, "│"))
+	fmt.Fprintf(w, "│%s│\n", strings.Join(headerParts, "│"))
 
 	// Header separator
 	sepParts := make([]string, numCols)
 	for i := range sepParts {
 		sepParts[i] = strings.Repeat("─", innerWidth+2)
 	}
-	fmt.Printf("├%s┤\n", strings.Join(sepParts, "┼"))
+	fmt.Fprintf(w, "├%s┤\n", strings.Join(sepParts, "┼"))
 
 	// Card rows (skip row 0, that was the header)
 	for row := 1; row < maxRows; row++ {
@@ -168,7 +169,7 @@ func printBoardView(groups map[string][]github.ProjectItem) {
 				parts[col] = " " + strings.Repeat(" ", innerWidth) + " "
 			}
 		}
-		fmt.Printf("│%s│\n", strings.Join(parts, "│"))
+		fmt.Fprintf(w, "│%s│\n", strings.Join(parts, "│"))
 	}
 
 	// Bottom border
@@ -176,14 +177,14 @@ func printBoardView(groups map[string][]github.ProjectItem) {
 	for i := range bottomParts {
 		bottomParts[i] = strings.Repeat("─", innerWidth+2)
 	}
-	fmt.Printf("└%s┘\n", strings.Join(bottomParts, "┴"))
+	fmt.Fprintf(w, "└%s┘\n", strings.Join(bottomParts, "┴"))
 }
 
 // printSwimlaneBoardView renders a kanban board with swimlanes per assignee.
-func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
+func printSwimlaneBoardView(w io.Writer, groups map[string][]github.ProjectItem) {
 	statuses := sortedStatuses(groups)
 	if len(statuses) == 0 {
-		fmt.Println("  (no items)")
+		fmt.Fprintln(w, "  (no items)")
 		return
 	}
 
@@ -229,20 +230,20 @@ func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
 	for i := range topParts {
 		topParts[i] = strings.Repeat("─", innerWidth+2)
 	}
-	fmt.Printf("┌%s┐\n", strings.Join(topParts, "┬"))
+	fmt.Fprintf(w, "┌%s┐\n", strings.Join(topParts, "┬"))
 
 	headerParts := make([]string, numCols)
 	for i, status := range statuses {
 		header := fmt.Sprintf("%s %s (%d)", statusEmoji(status), status, len(groups[status]))
 		headerParts[i] = " " + padOrTruncate(header, innerWidth) + " "
 	}
-	fmt.Printf("│%s│\n", strings.Join(headerParts, "│"))
+	fmt.Fprintf(w, "│%s│\n", strings.Join(headerParts, "│"))
 
 	sepParts := make([]string, numCols)
 	for i := range sepParts {
 		sepParts[i] = strings.Repeat("═", innerWidth+2)
 	}
-	fmt.Printf("╞%s╡\n", strings.Join(sepParts, "╪"))
+	fmt.Fprintf(w, "╞%s╡\n", strings.Join(sepParts, "╪"))
 
 	// Print each swimlane
 	for laneIdx, assignee := range assignees {
@@ -259,7 +260,7 @@ func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
 				laneLine[i] = " " + strings.Repeat(" ", innerWidth) + " "
 			}
 		}
-		fmt.Printf("│%s│\n", strings.Join(laneLine, "│"))
+		fmt.Fprintf(w, "│%s│\n", strings.Join(laneLine, "│"))
 
 		// Items for this assignee in each column
 		columns := make([][]string, numCols)
@@ -315,7 +316,7 @@ func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
 					parts[col] = " " + strings.Repeat(" ", innerWidth) + " "
 				}
 			}
-			fmt.Printf("│%s│\n", strings.Join(parts, "│"))
+			fmt.Fprintf(w, "│%s│\n", strings.Join(parts, "│"))
 		}
 
 		// Separator between swimlanes (not after last)
@@ -324,7 +325,7 @@ func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
 			for i := range divParts {
 				divParts[i] = strings.Repeat("─", innerWidth+2)
 			}
-			fmt.Printf("├%s┤\n", strings.Join(divParts, "┼"))
+			fmt.Fprintf(w, "├%s┤\n", strings.Join(divParts, "┼"))
 		}
 	}
 
@@ -333,7 +334,7 @@ func printSwimlaneBoardView(groups map[string][]github.ProjectItem) {
 	for i := range bottomParts {
 		bottomParts[i] = strings.Repeat("─", innerWidth+2)
 	}
-	fmt.Printf("└%s┘\n", strings.Join(bottomParts, "┴"))
+	fmt.Fprintf(w, "└%s┘\n", strings.Join(bottomParts, "┴"))
 }
 
 func padOrTruncate(s string, width int) string {

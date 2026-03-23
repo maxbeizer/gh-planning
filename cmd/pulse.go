@@ -53,7 +53,7 @@ func runPulse(cmd *cobra.Command, args []string) error {
 	}
 	users := []string{}
 	if pulseOpts.Team != "" {
-		users = splitTeam(pulseOpts.Team)
+		users = splitAndTrim(pulseOpts.Team)
 	} else {
 		users = append(users, cfg.Team...)
 	}
@@ -125,7 +125,7 @@ func runPulse(cmd *cobra.Command, args []string) error {
 			"summary":  summary,
 			"duration": sinceDuration.String(),
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	w := cmd.OutOrStdout()

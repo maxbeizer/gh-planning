@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -13,29 +14,27 @@ type Options struct {
 	JQ   string
 }
 
-func PrintJSON(data interface{}, opts Options) error {
+func PrintJSON(w io.Writer, data interface{}, opts Options) error {
 	payload, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
 	if opts.JQ != "" {
-		return runJQ(payload, opts.JQ)
+		return runJQ(w, payload, opts.JQ)
 	}
-	fmt.Println(string(payload))
-	os.Stdout.Sync()
+	fmt.Fprintln(w, string(payload))
 	return nil
 }
 
-func runJQ(input []byte, expr string) error {
+func runJQ(w io.Writer, input []byte, expr string) error {
 	if _, err := exec.LookPath("jq"); err != nil {
 		fmt.Fprintln(os.Stderr, "jq not installed; printing JSON instead")
-		fmt.Println(string(input))
-		os.Stdout.Sync()
+		fmt.Fprintln(w, string(input))
 		return nil
 	}
 	cmd := exec.Command("jq", expr)
 	cmd.Stdin = bytes.NewReader(input)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = w
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }

@@ -117,7 +117,7 @@ func runPrep(cmd *cobra.Command, args []string) error {
 	}
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
-		return output.PrintJSON(report, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), report, OutputOptions())
 	}
 
 	prepDoc := renderPrepDoc(report)

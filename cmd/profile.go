@@ -217,7 +217,7 @@ func runProfileShow(cmd *cobra.Command, args []string) error {
 		if detected != "" {
 			payload["detected"] = detected
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	if detected != "" && detected != profileName {
@@ -269,7 +269,7 @@ func runProfileList(cmd *cobra.Command, args []string) error {
 		if detected != "" {
 			payload["detected"] = detected
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	for _, name := range names {
@@ -491,7 +491,7 @@ func runProfileUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
-		return output.PrintJSON(map[string]interface{}{
+		return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{
 			"profile": name,
 			"updated": true,
 			"config":  cfg,
@@ -528,7 +528,7 @@ func runProfileDetect(cmd *cobra.Command, args []string) error {
 		for i, m := range matches {
 			names[i] = m.Name
 		}
-		return output.PrintJSON(map[string]interface{}{"matches": names}, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{"matches": names}, OutputOptions())
 	}
 
 	if len(matches) == 0 {
@@ -544,7 +544,7 @@ func runProfileDetect(cmd *cobra.Command, args []string) error {
 			}
 
 			if OutputOptions().JSON || OutputOptions().JQ != "" {
-				return output.PrintJSON(map[string]interface{}{
+				return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{
 					"matches":    []string{},
 					"helmDetect": true,
 					"project":    helmCfg.Project.Board,
@@ -684,15 +684,4 @@ func (m profileSelectModel) View() string {
 	return b.String()
 }
 
-// splitAndTrim splits a comma-separated string and trims whitespace.
-func splitAndTrim(value string) []string {
-	parts := strings.Split(value, ",")
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			result = append(result, p)
-		}
-	}
-	return result
-}
+

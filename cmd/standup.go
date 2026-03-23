@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -100,7 +101,7 @@ func runStandup(cmd *cobra.Command, args []string) error {
 			"team":      standupOpts.Team,
 			"reports":   results,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "📋 Standup — %s\n\n", time.Now().Format("Mon Jan 2, 2006"))
@@ -108,7 +109,7 @@ func runStandup(cmd *cobra.Command, args []string) error {
 		if standupOpts.Team {
 			fmt.Fprintf(cmd.OutOrStdout(), "👤 @%s\n\n", report.User)
 		}
-		printStandupReport(report, sinceDuration)
+		printStandupReport(cmd.OutOrStdout(), report, sinceDuration)
 		if idx < len(results)-1 {
 			fmt.Fprintln(cmd.OutOrStdout())
 		}
@@ -234,47 +235,47 @@ func filterProjectByStatus(project *github.Project, assignee string, status stri
 	return items
 }
 
-func printStandupReport(report standupData, since time.Duration) {
-	fmt.Printf("✅ Done (since %s)\n", humanizeSinceLabel(since))
+func printStandupReport(w io.Writer, report standupData, since time.Duration) {
+	fmt.Fprintf(w, "✅ Done (since %s)\n", humanizeSinceLabel(since))
 	if len(report.Done) == 0 {
-		fmt.Println("  • None")
+		fmt.Fprintln(w, "  • None")
 	} else {
 		for _, item := range report.Done {
 			label := "Closed"
 			if strings.Contains(strings.ToLower(item.URL), "/pull/") || strings.Contains(strings.ToLower(item.URL), "pull") {
 				label = "Merged PR"
 			}
-			fmt.Printf("  • %s %s: %s (%s)\n", label, issueRef(item.Number, item.URL), item.Title, item.Repo)
+			fmt.Fprintf(w, "  • %s %s: %s (%s)\n", label, issueRef(item.Number, item.URL), item.Title, item.Repo)
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(w)
 
-	fmt.Println("🔵 In Progress")
+	fmt.Fprintln(w, "🔵 In Progress")
 	if len(report.InProgress) == 0 {
-		fmt.Println("  • None")
+		fmt.Fprintln(w, "  • None")
 	} else {
 		for _, item := range report.InProgress {
-			fmt.Printf("  • %s: %s (%s) — %s\n", issueRef(item.Number, item.URL), item.Title, item.Repo, activeLabel(item.UpdatedAt))
+			fmt.Fprintf(w, "  • %s: %s (%s) — %s\n", issueRef(item.Number, item.URL), item.Title, item.Repo, activeLabel(item.UpdatedAt))
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(w)
 
-	fmt.Println("🚫 Blocked")
+	fmt.Fprintln(w, "🚫 Blocked")
 	if len(report.Blocked) == 0 {
-		fmt.Println("  • None")
+		fmt.Fprintln(w, "  • None")
 	} else {
 		for _, item := range report.Blocked {
-			fmt.Printf("  • %s: %s (%s) — %s\n", issueRef(item.Number, item.URL), item.Title, item.Repo, activeLabel(item.UpdatedAt))
+			fmt.Fprintf(w, "  • %s: %s (%s) — %s\n", issueRef(item.Number, item.URL), item.Title, item.Repo, activeLabel(item.UpdatedAt))
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(w)
 
-	fmt.Println("🔍 In Review")
+	fmt.Fprintln(w, "🔍 In Review")
 	if len(report.InReview) == 0 {
-		fmt.Println("  • None")
+		fmt.Fprintln(w, "  • None")
 	} else {
 		for _, item := range report.InReview {
-			fmt.Printf("  • PR %s: %s (%s) — awaiting review\n", issueRef(item.Number, item.URL), item.Title, item.Repo)
+			fmt.Fprintf(w, "  • PR %s: %s (%s) — awaiting review\n", issueRef(item.Number, item.URL), item.Title, item.Repo)
 		}
 	}
 }

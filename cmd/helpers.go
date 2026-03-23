@@ -211,3 +211,16 @@ return item.ID, nil
 }
 return "", fmt.Errorf("issue not found in project")
 }
+
+// splitAndTrim splits a comma-separated string and trims whitespace.
+func splitAndTrim(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}

@@ -34,7 +34,7 @@ var copilotSkillsCmd = &cobra.Command{
 			return err
 		}
 		if OutputOptions().JSON || OutputOptions().JQ != "" {
-			return output.PrintJSON(map[string]interface{}{"skills": skills}, OutputOptions())
+			return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{"skills": skills}, OutputOptions())
 		}
 		for _, skill := range skills {
 			fmt.Fprintln(cmd.OutOrStdout(), skill)
@@ -57,7 +57,7 @@ var copilotTestCmd = &cobra.Command{
 			"reason":  suggestion.Reason,
 		}
 		if OutputOptions().JSON || OutputOptions().JQ != "" {
-			return output.PrintJSON(payload, OutputOptions())
+			return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Skill: %s\n", suggestion.Skill)
 		fmt.Fprintf(cmd.OutOrStdout(), "Command: %s\n", suggestion.Command)

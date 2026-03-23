@@ -106,7 +106,7 @@ func runTrack(cmd *cobra.Command, args []string) error {
 	}
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
-		return output.PrintJSON(issue, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), issue, OutputOptions())
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "Created %s\n", issue.URL)
 	return nil

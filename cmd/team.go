@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/maxbeizer/gh-planning/internal/config"
@@ -48,7 +47,7 @@ func runTeam(cmd *cobra.Command, args []string) error {
 	}
 	users := []string{}
 	if teamOpts.Team != "" {
-		users = splitTeam(teamOpts.Team)
+		users = splitAndTrim(teamOpts.Team)
 	} else {
 		users = append(users, cfg.Team...)
 	}
@@ -93,7 +92,7 @@ func runTeam(cmd *cobra.Command, args []string) error {
 			"since":   sinceTime,
 			"reports": summaries,
 		}
-		return output.PrintJSON(payload, OutputOptions())
+		return output.PrintJSON(cmd.OutOrStdout(), payload, OutputOptions())
 	}
 
 	w := cmd.OutOrStdout()
@@ -120,18 +119,6 @@ func runTeam(cmd *cobra.Command, args []string) error {
 		}
 	}
 	return nil
-}
-
-func splitTeam(value string) []string {
-	parts := strings.Split(value, ",")
-	team := []string{}
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
-			team = append(team, part)
-		}
-	}
-	return team
 }
 
 func formatLastActive(t time.Time) string {
