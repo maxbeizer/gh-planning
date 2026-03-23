@@ -80,6 +80,8 @@ func runReview(cmd *cobra.Command, args []string) error {
 		conclusion := strings.ToUpper(check.Conclusion)
 		switch {
 		case conclusion == "SUCCESS" || state == "SUCCESS":
+			// Successful checks need no counter; ChecksPassing is derived
+			// from the absence of failing/pending checks below.
 		case conclusion == "FAILURE" || state == "FAILURE":
 			summary.ChecksFailing++
 		case conclusion == "NEUTRAL" || conclusion == "SKIPPED":

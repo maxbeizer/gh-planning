@@ -569,9 +569,9 @@ func VerifyProject(ctx context.Context, owner string, number int) (string, error
 }
 
 func totalItems(p *Project) int {
-count := 0
-for _, items := range p.Items {
-count += len(items)
-}
-return count
+	count := 0
+	for _, items := range p.Items {
+		count += len(items)
+	}
+	return count
 }
