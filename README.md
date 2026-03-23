@@ -87,3 +87,7 @@ make build        # build
 make ci           # build + vet + test
 make help         # all targets
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
