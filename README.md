@@ -8,7 +8,7 @@ Your project board, in your terminal.
 
 **Works with your existing setup.** gh-planning reads and writes GitHub Projects V2 directly. Your teammates using the web UI see the same board, the same statuses, the same assignments. There's nothing to migrate and nothing to sync.
 
-**Built for AI-assisted workflows.** Agents can claim issues, log progress, and post structured handoffs — all through the same commands humans use. Your board becomes the shared workspace for human and AI contributors alike.
+**Built for AI-assisted workflows.** Agents can focus on issues, log progress, and track blockers — all through the same commands humans use. Your board becomes the shared workspace for human and AI contributors alike.
 
 **Team visibility without meetings.** Generate standup reports, catch-up summaries, 1-1 prep docs, and team health metrics from real GitHub activity. No more "what did you work on?" — the data is already there.
 
@@ -39,14 +39,13 @@ gh planning standup
 
 ## What can it do?
 
-| Category               | Commands                                                     |                                                               |
-| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| **Personal workflow**  | `status` `board` `track` `focus` `unfocus` `log` `breakdown` | View your board, track issues, focus on work, log progress    |
-| **Reports**            | `standup` `catch-up` `review`                                | Generate standups, catch-up summaries, PR reviews             |
-| **Team**               | `team` `prep` `pulse`                                        | Team activity, 1-1 prep docs, health metrics                  |
-| **Agent coordination** | `agent-context` `claim` `complete` `handoff` `queue`         | AI agent lifecycle — claim work, hand off context             |
-| **Learning**           | `tutorial` `cheatsheet` `guide`                              | Interactive tutorials, searchable cheatsheet, workflow guides |
-| **Configuration**      | `setup` `profile`                                            | Interactive setup, named profiles with auto-detection         |
+| Category              | Commands                                                                       |                                                               |
+| --------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Personal workflow** | `status` `board` `track` `focus` `unfocus` `log` `logs` `blocked` `unblock`   | View your board, track issues, focus on work, manage blockers |
+| **Reports**           | `standup` `catch-up` `review`                                                  | Generate standups, catch-up summaries, PR reviews             |
+| **Team**              | `team` `prep` `pulse`                                                          | Team activity, 1-1 prep docs, health metrics                  |
+| **Learning**          | `tutorial` `cheatsheet` `guide`                                                | Interactive tutorials, searchable cheatsheet, workflow guides |
+| **Configuration**     | `setup` `init` `profile`                                                       | Interactive setup, initialization, named profiles             |
 
 All commands support `--json` and `--jq` flags for scripting.
 

@@ -72,7 +72,6 @@ gh planning guide morning      # morning standup routine
 gh planning guide new-task     # picking up new work
 gh planning guide one-on-one   # preparing for 1-1s
 gh planning guide agent        # working with AI agents
-gh planning guide breakdown    # breaking down large issues
 ```
 
 ---
@@ -134,6 +133,25 @@ Show which profile matches the current repo based on `repos` and `orgs` fields. 
 
 ```bash
 gh planning profile detect
+```
+
+### `gh planning profile create <name>`
+
+Create a new profile with interactive setup. Prompts for project, owner, repos, orgs, and team if not provided via flags.
+
+```bash
+gh planning profile create work
+gh planning profile create work --project 25 --owner maxbeizer --repos github/github --use
+gh planning profile create side-project --force   # overwrite if exists
+```
+
+### `gh planning profile update <name>`
+
+Update an existing profile. Only the fields you specify are changed; everything else is preserved.
+
+```bash
+gh planning profile update work --repos github/github,github/gh-*
+gh planning profile update work --team alice,bob --orgs github
 ```
 
 ### `gh planning profile delete <profile>`
@@ -241,15 +259,6 @@ gh planning catch-up
 gh planning catch-up --since friday
 ```
 
-### `gh planning breakdown <issue>`
-
-Split a large issue into sub-issues using GitHub Models. Helps you plan work without doing the breakdown manually.
-
-```bash
-gh planning breakdown https://github.com/maxbeizer/app/issues/42 --dry-run
-gh planning breakdown 42 --repo maxbeizer/app
-```
-
 ### `gh planning review <pr>`
 
 Quick review summary for a pull request. Get up to speed on what a PR does before diving into the diff.
@@ -260,30 +269,24 @@ gh planning review 48 --repo maxbeizer/app
 
 ---
 
-## Handoffs & Completion
+## Blockers
 
-### `gh planning claim <issue>`
+### `gh planning blocked <issue>`
 
-Claim an issue by assigning yourself and moving it to In Progress. One command instead of two manual steps.
+Mark an issue as blocked by another issue. Records the blocking relationship on the project board.
 
 ```bash
-gh planning claim maxbeizer/app#42
+gh planning blocked maxbeizer/app#42 --by maxbeizer/app#38
+gh planning blocked 42 --by 38 --repo maxbeizer/app
 ```
 
-### `gh planning complete <issue>`
+### `gh planning unblock <issue>`
 
-Post a completion handoff and move the issue forward. Links to the PR that implements the work.
-
-```bash
-gh planning complete maxbeizer/app#42 --done "OAuth flow" --pr 48
-```
-
-### `gh planning handoff <issue>`
-
-Post a structured session handoff to an issue. Use this when you're stopping work mid-task and want the next person (or your future self) to pick up seamlessly.
+Remove a block from an issue.
 
 ```bash
-gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout flow"
+gh planning unblock maxbeizer/app#42
+gh planning unblock 42 --repo maxbeizer/app
 ```
 
 ---
@@ -315,27 +318,6 @@ Show team health metrics — throughput, cycle time, and workload distribution.
 ```bash
 gh planning pulse --since 30d
 gh planning pulse --team maxbeizer,claudia-bot
-```
-
----
-
-## Agent & AI
-
-### `gh planning agent-context`
-
-Summarize everything an AI agent needs to start work: current focus, project state, recent handoffs, and relevant context. Use `--new-session` at the start of each agent conversation.
-
-```bash
-gh planning agent-context --new-session
-gh planning agent-context --issue 42 --repo maxbeizer/app
-```
-
-### `gh planning queue`
-
-Show items ready for agent processing. Filter by label and status to find work that's been triaged for automation.
-
-```bash
-gh planning queue --label agent-ready --status Backlog --status Ready
 ```
 
 ---

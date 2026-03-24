@@ -48,9 +48,6 @@ gh planning
 # Create an issue and add it to your project in one shot
 gh planning track "Add retry logic" --repo maxbeizer/app --status "In Progress"
 
-# A big issue? Break it down into sub-issues with AI
-gh planning breakdown maxbeizer/app#42
-
 # Quick PR review summary
 gh planning review 48 --repo maxbeizer/app
 ```
@@ -60,9 +57,6 @@ gh planning review 48 --repo maxbeizer/app
 ```bash
 # Clear focus and leave a note on the issue
 gh planning unfocus --comment "OAuth flow done, logout still needs work"
-
-# Or do a structured handoff
-gh planning handoff maxbeizer/app#42 --done "OAuth flow" --remaining "Logout"
 ```
 
 ## Team Features
@@ -86,66 +80,54 @@ gh planning pulse --since 30d
 
 ## Agent / AI Integration
 
-`gh planning` doubles as an agent command center, inspired by
-[td](https://td.haplab.com). AI coding agents can pick up work, log
-progress, and hand off results — all through the same project board.
+`gh planning` doubles as an agent command center. AI coding agents can
+focus on issues, log progress, and track blockers — all through the same
+commands humans use. Your board becomes the shared workspace for human
+and AI contributors alike.
 
 ### Session Start
 
 Add this to your `CLAUDE.md`, Copilot instructions, or system prompt:
 
 ```
-Run `gh planning agent-context --new-session` at conversation start.
+Run `gh planning focus <owner/repo#number>` at conversation start, then
+check `gh planning logs` for context from previous sessions.
 ```
 
-This gives the agent everything in one shot: current focus, project
-status, recent logs, pending handoffs, blocked items, and what to
-work on next. See [docs/agent-instructions.md](docs/agent-instructions.md)
-for full setup instructions.
+This gives the agent a focused issue to work on and access to the
+progress trail from earlier sessions.
 
 ### The Agent Loop
 
 ```bash
-# 1. Get context (run this first, every session)
-gh planning agent-context --new-session
+# 1. Focus on the issue you're working on
+gh planning focus maxbeizer/app#42
 
-# 2. Pick work (use suggested item or browse the queue)
-gh planning queue --label agent-ready
+# 2. Check what previous sessions recorded
+gh planning logs
 
-# 3. Claim it
-gh planning claim maxbeizer/app#42
-
-# 4. Log progress as you work
+# 3. Log progress as you work
 gh planning log "OAuth callback working"
 gh planning log --decision "Using JWT for stateless auth"
 gh planning log --blocker "Need clarification on token rotation"
 gh planning log --tried "Session-based approach, too complex"
 gh planning log --result "Benchmarks show 2ms token validation"
 
-# 5. View the log trail
-gh planning logs
+# 4. Mark blockers if needed
+gh planning blocked maxbeizer/app#42 --by maxbeizer/app#38
 
-# 6. Hand off (if passing to another session)
-gh planning handoff maxbeizer/app#42 \
-  --done "OAuth flow" \
-  --remaining "Token refresh" \
-  --decision "Using JWT" \
-  --uncertain "Should tokens expire on password change?"
-
-# 7. Or complete (if done)
-gh planning complete maxbeizer/app#42 --done "Implemented OAuth" --pr 48
+# 5. Clear focus when done
+gh planning unfocus --comment "OAuth flow complete, PR #48 ready for review"
 ```
 
 ### Why This Works
 
-- **No context loss**: `agent-context --new-session` gives the next
-  session everything the previous one knew
-- **Structured handoffs**: Done, remaining, decisions, and open
-  questions are captured explicitly — not guessed from code
 - **Progress logging**: Decisions and findings during work are
-  preserved for future sessions
+  preserved for future sessions via `log` / `logs`
+- **Focus tracking**: `focus` / `unfocus` give clear session boundaries
+  with elapsed time
 - **Same board**: Humans and agents share the same GitHub Project,
-  so handoffs between them are seamless
+  so coordination is seamless
 
 ### Copilot / MCP
 
@@ -184,8 +166,7 @@ gh planning init --project 25 --owner maxbeizer
 | **Profile** | A named config set. Switch between work/personal with `profile use`. Profiles can auto-detect based on your repo. |
 | **Focus** | Your current working issue. One at a time. Tracked locally with elapsed time. |
 | **Team** | A list of GitHub usernames. Used by `standup --team`, `team`, `pulse`, and `prep`. |
-| **Queue** | Project items filtered by label/status — the "inbox" for agent work. |
-| **Handoff** | A structured comment posted to an issue summarizing done/remaining work. |
+| **Blocked** | An issue blocked by another issue. Managed with `blocked` and `unblock`. |
 
 ## All Commands
 
@@ -195,22 +176,22 @@ gh planning init --project 25 --owner maxbeizer
 | `init` | Set default project (non-interactive) |
 | `profile set/show` | Read or write individual profile values |
 | `profile use/list/delete` | Switch between named profiles |
+| `profile create/update` | Create or update profiles with flags or interactively |
+| `profile detect` | Show which profile matches the current repo |
 | `status` | Project board summary (list, `--board`, or `--swimlanes`) |
 | `board` | Kanban board view (excludes Done by default) |
 | `track` | Create an issue and add it to the project |
 | `focus` / `unfocus` | Set or clear your current working issue |
 | `log` | Log progress, decisions, blockers during work |
 | `logs` | View the progress log timeline |
+| `blocked` / `unblock` | Mark or remove blockers between issues |
 | `standup` | Generate a standup report from GitHub activity |
 | `catch-up` | Summarize updates since your last session |
-| `breakdown` | Split an issue into sub-issues with AI |
-| `handoff` | Post a structured session handoff to an issue |
-| `claim` | Assign yourself and move an issue to In Progress |
-| `complete` | Post a completion summary and advance the issue |
-| `agent-context` | Dump context an AI agent needs to start work |
-| `queue` | Show items ready for agent processing |
 | `review` | Quick review summary for a PR |
 | `team` | Recent activity across your team |
 | `prep` | Generate a 1-1 preparation document |
 | `pulse` | Team health metrics |
+| `tutorial` | Interactive hands-on tutorial |
+| `cheatsheet` | Browsable quick-reference by scenario |
+| `guide` | Step-by-step workflow walkthroughs |
 | `copilot` | Copilot skill listing, MCP server, and testing |
