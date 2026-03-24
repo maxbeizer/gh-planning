@@ -71,7 +71,6 @@ gh planning guide              # list available guides
 gh planning guide morning      # morning standup routine
 gh planning guide new-task     # picking up new work
 gh planning guide one-on-one   # preparing for 1-1s
-gh planning guide agent        # working with AI agents
 ```
 
 ---

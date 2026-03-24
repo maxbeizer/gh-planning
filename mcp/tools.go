@@ -321,7 +321,7 @@ var tools = []ToolDefinition{
 			"workflow": map[string]interface{}{
 				"type":        "string",
 				"description": "Workflow name",
-				"enum":        []string{"morning", "new-task", "one-on-one", "agent", "breakdown"},
+				"enum":        []string{"morning", "new-task", "one-on-one"},
 			},
 		}),
 		Command: []string{"planning", "guide"},
