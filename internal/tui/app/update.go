@@ -1,11 +1,14 @@
 package app
 
 import (
+	"fmt"
 	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/maxbeizer/gh-planning/internal/github"
+	"github.com/maxbeizer/gh-planning/internal/tui/actions"
+	"github.com/maxbeizer/gh-planning/internal/tui/components/picker"
 	"github.com/maxbeizer/gh-planning/internal/tui/copilot"
 )
 
@@ -38,6 +41,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = true
 		return m, fetchProjectDataFresh(m.ctx.Owner, m.ctx.ProjectNumber)
 
+	case actions.AssignResultMsg:
+		if msg.Err != nil {
+			m.footer.SetStatus(fmt.Sprintf("Assign failed: %v", msg.Err))
+		} else {
+			m.footer.SetStatus(fmt.Sprintf("Assigned %s", msg.User))
+			m.loading = true
+			return m, fetchProjectDataFresh(m.ctx.Owner, m.ctx.ProjectNumber)
+		}
+
+	case actions.LabelResultMsg:
+		if msg.Err != nil {
+			m.footer.SetStatus(fmt.Sprintf("Label failed: %v", msg.Err))
+		} else {
+			m.footer.SetStatus(fmt.Sprintf("Added label %s", msg.Label))
+			m.loading = true
+			return m, fetchProjectDataFresh(m.ctx.Owner, m.ctx.ProjectNumber)
+		}
+
+	case actions.LogResultMsg:
+		if msg.Err != nil {
+			m.footer.SetStatus(fmt.Sprintf("Log failed: %v", msg.Err))
+		} else {
+			m.footer.SetStatus("Progress logged")
+		}
+
 	case tea.KeyMsg:
 		// When detail pane is visible, delegate all keys to it.
 		if m.detail.IsVisible() {
@@ -55,6 +83,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.help.Toggle()
 			}
 			return m, nil
+		}
+
+		// When picker overlay is visible, delegate to picker.
+		if m.picker.IsVisible() {
+			var cmd tea.Cmd
+			m.picker, cmd = m.picker.Update(msg)
+			return m, cmd
+		}
+
+		// When prompt overlay is visible, delegate to prompt.
+		if m.prompt.IsVisible() {
+			var cmd tea.Cmd
+			m.prompt, cmd = m.prompt.Update(msg)
+			return m, cmd
 		}
 
 		// When search bar is active, delegate keys to it (except esc).
@@ -93,6 +135,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if item != nil {
 				return m, copilot.Launch(item)
 			}
+		case key.Matches(msg, m.actionKeys.Assign):
+			item := m.activeItem()
+			if item == nil {
+				break
+			}
+			team := m.ctx.Config.Team
+			if len(team) == 0 {
+				m.footer.SetStatus("No team configured — add team members in config")
+				break
+			}
+			opts := make([]picker.Option, len(team))
+			for i, u := range team {
+				opts[i] = picker.Option{Name: u, ID: u}
+			}
+			m.picker.SetTitle("Assign User")
+			m.picker.SetOptions(opts)
+			m.picker.SetOnSelect(func(opt picker.Option) tea.Cmd {
+				return actions.AssignUser(item.Repository, item.Number, opt.ID)
+			})
+			m.picker.SetVisible(true)
+		case key.Matches(msg, m.actionKeys.Label):
+			item := m.activeItem()
+			if item == nil {
+				break
+			}
+			cmd := m.prompt.Show("Add label:", func(label string) tea.Cmd {
+				return actions.AddLabel(item.Repository, item.Number, label)
+			})
+			return m, cmd
+		case key.Matches(msg, m.actionKeys.Log):
+			item := m.activeItem()
+			if item == nil {
+				break
+			}
+			cmd := m.prompt.Show("Log progress:", func(message string) tea.Cmd {
+				return actions.LogProgress(message, item.Number)
+			})
+			return m, cmd
 		case key.Matches(msg, m.keys.Refresh):
 			if !m.loading {
 				m.loading = true
@@ -125,6 +205,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// activeItem returns the currently selected item from whichever view tab is active.
+func (m *Model) activeItem() *github.ProjectItem {
+	switch m.activeTab {
+	case 0:
+		return m.board.SelectedItem()
+	case 1:
+		return m.listview.SelectedItem()
+	case 3:
+		return m.depgraph.SelectedItem()
+	}
+	return nil
 }
 
 // updateFooterCounts syncs the footer item counts with the current filter state.

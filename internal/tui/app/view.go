@@ -79,6 +79,18 @@ func (m Model) View() tea.View {
 		base = overlayString(base, centeredOverlay, m.ctx.Width, m.ctx.Height)
 	}
 
+	// Picker overlay — rendered on top when visible.
+	if m.picker.IsVisible() {
+		overlay := m.picker.OverlayView(m.ctx.Width, m.ctx.Height)
+		base = overlayString(base, overlay, m.ctx.Width, m.ctx.Height)
+	}
+
+	// Prompt overlay — rendered on top when visible.
+	if m.prompt.IsVisible() {
+		overlay := m.prompt.OverlayView(m.ctx.Width, m.ctx.Height)
+		base = overlayString(base, overlay, m.ctx.Width, m.ctx.Height)
+	}
+
 	v := tea.NewView(base)
 	v.AltScreen = true
 	return v

@@ -56,6 +56,9 @@ var sections = []section{
 	{
 		title: "Actions",
 		bindings: []binding{
+			{"a", "assign/unassign"},
+			{"L", "add label"},
+			{"l", "log progress"},
 			{"o", "open in browser"},
 			{"c", "copilot"},
 			{"esc", "back/close"},

@@ -196,9 +196,12 @@ func (m *Model) markCriticalPath(nodeNumToIdx map[int]int) int {
 	maxLen := 0
 	maxIdx := -1
 
-	// Process in level order (already sorted).
+	// Process in level order (already sorted). Skip circular nodes.
 	for i := range m.nodes {
 		node := &m.nodes[i]
+		if node.Circular {
+			continue
+		}
 		for _, dep := range node.Item.BlockedBy {
 			if isOpen(dep.State) {
 				if j, ok := nodeNumToIdx[dep.Number]; ok {
@@ -218,8 +221,10 @@ func (m *Model) markCriticalPath(nodeNumToIdx map[int]int) int {
 
 	// Walk back and mark the critical path.
 	if maxIdx >= 0 && maxLen > 0 {
+		visited := make(map[int]bool, maxLen+1)
 		idx := maxIdx
-		for idx >= 0 {
+		for idx >= 0 && !visited[idx] {
+			visited[idx] = true
 			m.nodes[idx].Critical = true
 			idx = chainParent[idx]
 		}

@@ -17,6 +17,7 @@ type Model struct {
 	itemCount     int
 	filteredCount int // -1 if no filter active
 	filterQuery   string
+	status        string // transient status message
 }
 
 // New creates a footer Model wired to the given ProgramContext.
@@ -45,6 +46,11 @@ func (m *Model) SetFilter(query string) {
 	if query == "" {
 		m.filteredCount = -1
 	}
+}
+
+// SetStatus sets a transient status message shown in the center of the bar.
+func (m *Model) SetStatus(s string) {
+	m.status = s
 }
 
 // ViewWithStatus renders the status bar with a custom right-side status message.
@@ -127,6 +133,9 @@ func (m Model) renderLeft() string {
 }
 
 func (m Model) renderCenter() string {
+	if m.status != "" {
+		return m.status
+	}
 	if m.itemCount == 0 {
 		return ""
 	}

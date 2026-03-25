@@ -15,6 +15,7 @@ import (
 	"github.com/maxbeizer/gh-planning/internal/tui/components/footer"
 	"github.com/maxbeizer/gh-planning/internal/tui/components/help"
 	"github.com/maxbeizer/gh-planning/internal/tui/components/picker"
+	"github.com/maxbeizer/gh-planning/internal/tui/components/prompt"
 	"github.com/maxbeizer/gh-planning/internal/tui/components/search"
 	tuictx "github.com/maxbeizer/gh-planning/internal/tui/context"
 	"github.com/maxbeizer/gh-planning/internal/tui/detail"
@@ -137,6 +138,7 @@ func New(ctx *tuictx.ProgramContext) Model {
 	return Model{
 		ctx:           ctx,
 		keys:          keys.NewGlobalKeyMap(),
+		actionKeys:    keys.NewActionKeyMap(),
 		tabs:          []string{"Board", "List", "Tree", "Deps"},
 		footer:        footer.New(ctx),
 		help:          help.New(ctx),
@@ -148,6 +150,7 @@ func New(ctx *tuictx.ProgramContext) Model {
 		depgraph:      depgraph.New(ctx),
 		picker:        picker.New(ctx, nil, nil),
 		projectPicker: newProjectPicker(ctx),
+		prompt:        prompt.New(ctx),
 	}
 }
 
