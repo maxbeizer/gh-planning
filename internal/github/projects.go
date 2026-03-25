@@ -201,6 +201,10 @@ type cachedProject struct {
 	FetchedAt time.Time `json:"fetchedAt"`
 }
 
+func ProjectCachePath(owner string, number int) (string, error) {
+	return projectCachePath(owner, number)
+}
+
 func projectCachePath(owner string, number int) (string, error) {
 	base, err := os.UserCacheDir()
 	if err != nil {

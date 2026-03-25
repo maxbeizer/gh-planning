@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -29,10 +28,50 @@ func (m Model) View() tea.View {
 	}
 	b.WriteString(content)
 
-	// Status bar
-	b.WriteString(m.renderStatusBar())
+	// Status bar (show refresh indicator when loading)
+	if m.loading {
+		b.WriteString(m.footer.ViewWithStatus("⟳ refreshing..."))
+	} else {
+		b.WriteString(m.footer.View())
+	}
 
-	v := tea.NewView(b.String())
+	base := b.String()
+
+	// Help overlay — rendered on top when visible.
+	if m.help.IsVisible() {
+		overlay := m.help.View()
+		base = lipgloss.Place(
+			m.ctx.Width,
+			m.ctx.Height,
+			lipgloss.Left,
+			lipgloss.Top,
+			base,
+		)
+		// Layer the centered overlay on the base.
+		base = overlayString(base, overlay, m.ctx.Width, m.ctx.Height)
+	}
+
+	// Detail pane overlay — rendered on top when visible.
+	if m.detail.IsVisible() {
+		overlay := m.detail.View()
+		base = lipgloss.Place(
+			m.ctx.Width,
+			m.ctx.Height,
+			lipgloss.Left,
+			lipgloss.Top,
+			base,
+		)
+		centeredOverlay := lipgloss.Place(
+			m.ctx.Width,
+			m.ctx.Height,
+			lipgloss.Center,
+			lipgloss.Center,
+			overlay,
+		)
+		base = overlayString(base, centeredOverlay, m.ctx.Width, m.ctx.Height)
+	}
+
+	v := tea.NewView(base)
 	v.AltScreen = true
 	return v
 }
@@ -51,31 +90,37 @@ func (m Model) renderTabBar() string {
 
 func (m Model) renderContent() string {
 	th := m.ctx.Theme
+
+	if m.err != nil {
+		return th.Danger.Render("  Error: " + m.err.Error())
+	}
+
 	switch m.activeTab {
 	case 0:
-		return th.Muted.Render("Board view — coming soon")
+		return m.board.View()
 	case 1:
-		return th.Muted.Render("List view — coming soon")
+		return m.listview.View()
 	default:
 		return th.Muted.Render("Unknown view")
 	}
 }
 
-func (m Model) renderStatusBar() string {
-	th := m.ctx.Theme
+// overlayString composites the overlay on top of base, line by line.
+// Non-empty overlay lines replace corresponding base lines.
+func overlayString(base, overlay string, width, height int) string {
+	baseLines := strings.Split(base, "\n")
+	overlayLines := strings.Split(overlay, "\n")
 
-	left := fmt.Sprintf(" %s · %s/#%d",
-		m.ctx.ProfileName, m.ctx.Owner, m.ctx.ProjectNumber)
-	if m.ctx.ProfileName == "" {
-		left = fmt.Sprintf(" %s/#%d", m.ctx.Owner, m.ctx.ProjectNumber)
+	// Ensure base has enough lines.
+	for len(baseLines) < height {
+		baseLines = append(baseLines, "")
 	}
 
-	right := "? help · q quit · tab switch view "
-	gap := m.ctx.Width - lipgloss.Width(left) - lipgloss.Width(right)
-	if gap < 0 {
-		gap = 0
+	for i, ol := range overlayLines {
+		if i < len(baseLines) && strings.TrimSpace(ol) != "" {
+			baseLines[i] = ol
+		}
 	}
 
-	bar := left + strings.Repeat(" ", gap) + right
-	return th.StatusBar.Width(m.ctx.Width).Render(bar)
+	return strings.Join(baseLines, "\n")
 }
