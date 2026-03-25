@@ -18,8 +18,10 @@ import (
 	"github.com/maxbeizer/gh-planning/internal/tui/components/search"
 	tuictx "github.com/maxbeizer/gh-planning/internal/tui/context"
 	"github.com/maxbeizer/gh-planning/internal/tui/detail"
+	"github.com/maxbeizer/gh-planning/internal/tui/depgraph"
 	"github.com/maxbeizer/gh-planning/internal/tui/keys"
 	"github.com/maxbeizer/gh-planning/internal/tui/listview"
+	"github.com/maxbeizer/gh-planning/internal/tui/tree"
 )
 
 // projectDataMsg carries the result of a background project data fetch.
@@ -101,9 +103,10 @@ func updateItemStatus(owner string, number int, projectID, itemID, fieldID, opti
 
 // Model is the root Bubble Tea model for the TUI dashboard.
 type Model struct {
-	ctx       *tuictx.ProgramContext
-	keys      keys.GlobalKeyMap
-	activeTab int
+	ctx        *tuictx.ProgramContext
+	keys       keys.GlobalKeyMap
+	actionKeys keys.ActionKeyMap
+	activeTab  int
 	tabs      []string
 	ready     bool
 	loading   bool
@@ -113,17 +116,20 @@ type Model struct {
 	detail    detail.Model
 	search    search.Model
 	listview  listview.Model
+	tree      tree.Model
 	board     board.Model
-	picker    picker.Model
+	depgraph  depgraph.Model
+	picker        picker.Model
 	projectPicker picker.Model
+	prompt        prompt.Model
 
 	// Cached status mutation metadata.
 	statusProjectID string
 	statusFieldID   string
 	statusOptions   map[string]string // name → option ID
 	pendingItem     github.ProjectItem
-	mutating             bool
-autoRefreshInterval  time.Duration
+	mutating            bool
+	autoRefreshInterval time.Duration
 }
 
 // New creates a root Model wired to the given ProgramContext.
@@ -131,13 +137,15 @@ func New(ctx *tuictx.ProgramContext) Model {
 	return Model{
 		ctx:           ctx,
 		keys:          keys.NewGlobalKeyMap(),
-		tabs:          []string{"Board", "List"},
+		tabs:          []string{"Board", "List", "Tree", "Deps"},
 		footer:        footer.New(ctx),
 		help:          help.New(ctx),
 		detail:        detail.New(ctx),
 		search:        search.New(ctx),
 		listview:      listview.New(ctx),
+		tree:          tree.New(ctx),
 		board:         board.New(ctx),
+		depgraph:      depgraph.New(ctx),
 		picker:        picker.New(ctx, nil, nil),
 		projectPicker: newProjectPicker(ctx),
 	}

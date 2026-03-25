@@ -16,6 +16,7 @@ type Model struct {
 	lastRefresh   time.Time
 	itemCount     int
 	filteredCount int // -1 if no filter active
+	filterQuery   string
 }
 
 // New creates a footer Model wired to the given ProgramContext.
@@ -36,6 +37,14 @@ func (m *Model) SetRefreshTime(t time.Time) {
 func (m *Model) SetItemCount(total, filtered int) {
 	m.itemCount = total
 	m.filteredCount = filtered
+}
+
+// SetFilter updates the displayed filter query string.
+func (m *Model) SetFilter(query string) {
+	m.filterQuery = query
+	if query == "" {
+		m.filteredCount = -1
+	}
 }
 
 // ViewWithStatus renders the status bar with a custom right-side status message.
@@ -120,6 +129,9 @@ func (m Model) renderLeft() string {
 func (m Model) renderCenter() string {
 	if m.itemCount == 0 {
 		return ""
+	}
+	if m.filterQuery != "" && m.filteredCount >= 0 {
+		return fmt.Sprintf("🔍 filtering: %s  %d/%d items", m.filterQuery, m.filteredCount, m.itemCount)
 	}
 	if m.filteredCount >= 0 {
 		return fmt.Sprintf("%d/%d filtered", m.filteredCount, m.itemCount)

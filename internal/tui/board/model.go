@@ -1,6 +1,7 @@
 package board
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -22,10 +23,12 @@ var statusOrder = []string{
 type Model struct {
 	ctx       *tuictx.ProgramContext
 	keys      keys.NavigationKeyMap
-	columns   []Column
-	activeCol int
+	columns    []Column
+	activeCol  int
 	activeCard int
-	ready     bool
+	allItems   map[string][]github.ProjectItem // unfiltered items
+	filter     string
+	ready      bool
 }
 
 // New creates a board model wired to the given ProgramContext.
@@ -120,17 +123,64 @@ func (m Model) View() string {
 
 // SetItems populates the board columns from project data grouped by status.
 func (m *Model) SetItems(items map[string][]github.ProjectItem) {
-	statuses := sortedStatuses(items)
+	m.allItems = items
+	m.rebuildColumns()
+	m.ready = true
+	m.clampActiveCard()
+}
+
+// SetFilter applies a filter query. Empty string clears the filter.
+func (m *Model) SetFilter(query string) {
+	m.filter = query
+	m.rebuildColumns()
+}
+
+// FilteredItemCount returns the number of items currently visible.
+func (m *Model) FilteredItemCount() int {
+	n := 0
+	for _, col := range m.columns {
+		n += len(col.Items)
+	}
+	return n
+}
+
+// TotalItemCount returns the total number of unfiltered items.
+func (m *Model) TotalItemCount() int {
+	n := 0
+	for _, items := range m.allItems {
+		n += len(items)
+	}
+	return n
+}
+
+// rebuildColumns reconstructs columns from allItems, applying the current filter.
+func (m *Model) rebuildColumns() {
+	filtered := filterItems(m.allItems, m.filter)
+	statuses := sortedStatuses(filtered)
 	m.columns = make([]Column, len(statuses))
 	for i, status := range statuses {
 		m.columns[i] = Column{
 			Status: status,
 			Emoji:  statusEmoji(status),
-			Items:  items[status],
+			Items:  filtered[status],
 		}
 	}
-	m.ready = true
 	m.clampActiveCard()
+}
+
+// SelectedItem returns a pointer to the currently focused ProjectItem, or nil.
+func (m *Model) SelectedItem() *github.ProjectItem {
+	if len(m.columns) == 0 {
+		return nil
+	}
+	if m.activeCol < 0 || m.activeCol >= len(m.columns) {
+		return nil
+	}
+	col := &m.columns[m.activeCol]
+	if m.activeCard < 0 || m.activeCard >= len(col.Items) {
+		return nil
+	}
+	return &col.Items[m.activeCard]
 }
 
 // clampActiveCard ensures activeCard is within bounds for the current column.
@@ -164,6 +214,51 @@ func (m *Model) ensureVisible() {
 		colWidth = 50
 	}
 	col.EnsureActiveVisible(m.activeCard, contentHeight, colWidth)
+}
+
+// filterItems returns a copy of items containing only entries matching query.
+func filterItems(items map[string][]github.ProjectItem, query string) map[string][]github.ProjectItem {
+	if query == "" {
+		return items
+	}
+	q := strings.ToLower(query)
+	out := make(map[string][]github.ProjectItem, len(items))
+	for status, list := range items {
+		var matched []github.ProjectItem
+		for _, item := range list {
+			if matchesQuery(item, q) {
+				matched = append(matched, item)
+			}
+		}
+		if len(matched) > 0 {
+			out[status] = matched
+		}
+	}
+	return out
+}
+
+// matchesQuery checks whether a ProjectItem matches a lowercase query string.
+func matchesQuery(item github.ProjectItem, q string) bool {
+	if strings.Contains(strings.ToLower(item.Title), q) {
+		return true
+	}
+	if strings.Contains(fmt.Sprintf("%d", item.Number), q) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(item.Repository), q) {
+		return true
+	}
+	for _, a := range item.Assignees {
+		if strings.Contains(strings.ToLower(a), q) {
+			return true
+		}
+	}
+	for _, l := range item.Labels {
+		if strings.Contains(strings.ToLower(l), q) {
+			return true
+		}
+	}
+	return false
 }
 
 // statusRank returns the sort order for a given status string.

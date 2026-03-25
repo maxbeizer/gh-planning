@@ -18,9 +18,17 @@ func (m Model) View() tea.View {
 	b.WriteString(m.renderTabBar())
 	b.WriteString("\n")
 
+	// Search bar (between tab bar and content when active)
+	searchBarHeight := 0
+	if m.search.IsActive() {
+		b.WriteString(m.search.View())
+		b.WriteString("\n")
+		searchBarHeight = 1
+	}
+
 	// Content area
 	content := m.renderContent()
-	contentHeight := m.ctx.ContentHeight()
+	contentHeight := m.ctx.ContentHeight() - searchBarHeight
 	// Pad content to fill the available height.
 	lines := strings.Count(content, "\n") + 1
 	if lines < contentHeight {
@@ -100,6 +108,10 @@ func (m Model) renderContent() string {
 		return m.board.View()
 	case 1:
 		return m.listview.View()
+	case 2:
+		return m.tree.View()
+	case 3:
+		return m.depgraph.View()
 	default:
 		return th.Muted.Render("Unknown view")
 	}

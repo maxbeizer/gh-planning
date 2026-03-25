@@ -57,6 +57,7 @@ var sections = []section{
 		title: "Actions",
 		bindings: []binding{
 			{"o", "open in browser"},
+			{"c", "copilot"},
 			{"esc", "back/close"},
 		},
 	},

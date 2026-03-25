@@ -11,7 +11,8 @@ type GlobalKeyMap struct {
 	PrevTab    key.Binding
 	Filter     key.Binding
 	ClearFilter key.Binding
-	OpenBrowser key.Binding
+	OpenBrowser   key.Binding
+	LaunchCopilot key.Binding
 }
 
 // NewGlobalKeyMap returns the default global key bindings.
@@ -48,6 +49,35 @@ func NewGlobalKeyMap() GlobalKeyMap {
 		OpenBrowser: key.NewBinding(
 			key.WithKeys("o"),
 			key.WithHelp("o", "open in browser"),
+		),
+		LaunchCopilot: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", "copilot"),
+		),
+	}
+}
+
+// ActionKeyMap holds item-level action keys.
+type ActionKeyMap struct {
+	Assign key.Binding
+	Label  key.Binding
+	Log    key.Binding
+}
+
+// NewActionKeyMap returns the default action key bindings.
+func NewActionKeyMap() ActionKeyMap {
+	return ActionKeyMap{
+		Assign: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "assign"),
+		),
+		Label: key.NewBinding(
+			key.WithKeys("L"),
+			key.WithHelp("L", "label"),
+		),
+		Log: key.NewBinding(
+			key.WithKeys("l"),
+			key.WithHelp("l", "log progress"),
 		),
 	}
 }

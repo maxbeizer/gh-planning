@@ -1,6 +1,7 @@
 package listview
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -59,6 +60,8 @@ type Model struct {
 	ctx      *context.ProgramContext
 	keys     keys.NavigationKeyMap
 	sections []Section
+	allItems map[string][]github.ProjectItem // unfiltered items
+	filter   string
 	cursor   int // flat index across all visible rows (headers + items)
 	offset   int // scroll offset for viewport
 	ready    bool
@@ -74,13 +77,45 @@ func New(ctx *context.ProgramContext) Model {
 
 // SetItems populates sections from project data, sorted by status order.
 func (m *Model) SetItems(items map[string][]github.ProjectItem) {
-	// Collect unique statuses.
+	m.allItems = items
+	m.rebuildSections()
+	m.ready = true
+}
+
+// SetFilter applies a filter query. Empty string clears the filter.
+func (m *Model) SetFilter(query string) {
+	m.filter = query
+	m.rebuildSections()
+}
+
+// FilteredItemCount returns the number of items currently visible.
+func (m *Model) FilteredItemCount() int {
+	n := 0
+	for _, sec := range m.sections {
+		n += len(sec.Items)
+	}
+	return n
+}
+
+// TotalItemCount returns the total number of unfiltered items.
+func (m *Model) TotalItemCount() int {
+	n := 0
+	for _, items := range m.allItems {
+		n += len(items)
+	}
+	return n
+}
+
+// rebuildSections reconstructs sections from allItems, applying the current filter.
+func (m *Model) rebuildSections() {
+	filtered := filterItems(m.allItems, m.filter)
+
 	type statusGroup struct {
 		name  string
 		items []github.ProjectItem
 	}
 	var groups []statusGroup
-	for status, list := range items {
+	for status, list := range filtered {
 		if len(list) == 0 {
 			continue
 		}
@@ -100,7 +135,6 @@ func (m *Model) SetItems(items map[string][]github.ProjectItem) {
 	}
 	m.cursor = 0
 	m.offset = 0
-	m.ready = true
 }
 
 // rowEntry represents a single renderable row in the flat list.
@@ -147,6 +181,15 @@ func (m *Model) flatRows() []rowEntry {
 		}
 	}
 	return rows
+}
+
+// SelectedItem returns a pointer to the currently focused ProjectItem, or nil.
+func (m *Model) SelectedItem() *github.ProjectItem {
+	rows := m.flatRows()
+	if m.cursor >= 0 && m.cursor < len(rows) && !rows[m.cursor].isHeader {
+		return rows[m.cursor].item
+	}
+	return nil
 }
 
 func (m Model) Init() tea.Cmd {
@@ -258,4 +301,49 @@ func (m Model) View() string {
 	}
 
 	return b.String()
+}
+
+// filterItems returns a copy of items containing only entries matching query.
+func filterItems(items map[string][]github.ProjectItem, query string) map[string][]github.ProjectItem {
+	if query == "" {
+		return items
+	}
+	q := strings.ToLower(query)
+	out := make(map[string][]github.ProjectItem, len(items))
+	for status, list := range items {
+		var matched []github.ProjectItem
+		for _, item := range list {
+			if matchesQuery(item, q) {
+				matched = append(matched, item)
+			}
+		}
+		if len(matched) > 0 {
+			out[status] = matched
+		}
+	}
+	return out
+}
+
+// matchesQuery checks whether a ProjectItem matches a lowercase query string.
+func matchesQuery(item github.ProjectItem, q string) bool {
+	if strings.Contains(strings.ToLower(item.Title), q) {
+		return true
+	}
+	if strings.Contains(fmt.Sprintf("%d", item.Number), q) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(item.Repository), q) {
+		return true
+	}
+	for _, a := range item.Assignees {
+		if strings.Contains(strings.ToLower(a), q) {
+			return true
+		}
+	}
+	for _, l := range item.Labels {
+		if strings.Contains(strings.ToLower(l), q) {
+			return true
+		}
+	}
+	return false
 }
