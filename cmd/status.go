@@ -101,6 +101,9 @@ func filterProjectItems(project *github.Project, assignee string, stale time.Dur
 			continue
 		}
 		for _, item := range items {
+			if item.Number == 0 {
+				continue
+			}
 			if assignee != "" {
 				found := false
 				for _, a := range item.Assignees {

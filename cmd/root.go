@@ -114,7 +114,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if cfg.DefaultOwner != "" && cfg.DefaultProject != 0 {
-		fmt.Fprintf(w, "📋 Project: %s #%d\n", cfg.DefaultOwner, cfg.DefaultProject)
+		fmt.Fprintf(w, "📋 Project: %s\n", projectURL(cfg.DefaultOwner, cfg.DefaultProject))
 	}
 
 	if focus != nil {
