@@ -183,6 +183,32 @@ func (m *Model) rebuildContent() {
 	lines = append(lines,
 		label.Render("Type")+item.ContentType)
 
+	// Dependencies: Blocked By
+	if len(item.BlockedBy) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, th.Danger.Render("🚫 Blocked by"))
+		for _, dep := range item.BlockedBy {
+			stateEmoji := "🟢"
+			if strings.EqualFold(dep.State, "CLOSED") {
+				stateEmoji = "🔴"
+			}
+			lines = append(lines, fmt.Sprintf("  %s #%d  %s", stateEmoji, dep.Number, dep.Title))
+		}
+	}
+
+	// Dependencies: Blocks
+	if len(item.Blocks) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, th.Warning.Render("⛓  Blocks"))
+		for _, dep := range item.Blocks {
+			stateEmoji := "🟢"
+			if strings.EqualFold(dep.State, "CLOSED") {
+				stateEmoji = "🔴"
+			}
+			lines = append(lines, fmt.Sprintf("  %s #%d  %s", stateEmoji, dep.Number, dep.Title))
+		}
+	}
+
 	// Separator
 	lines = append(lines, "")
 	lines = append(lines, th.Dimmed.Render(strings.Repeat("─", 40)))

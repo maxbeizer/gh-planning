@@ -66,10 +66,16 @@ func RenderCard(item github.ProjectItem, width int, isActive bool, th *theme.The
 	meta := strings.Join(metaParts, "  ")
 	line2 := metaStyle.Render(truncate(meta, innerWidth))
 
+	// Add blocked indicator when the item has open dependency blockers.
+	if item.IsBlocked() {
+		line2 = th.Danger.Render("🚫 blocked") + "  " + line2
+	}
+
 	content := line1 + "\n" + line2
 
-	// Determine if blocked (status contains "block").
-	isBlocked := strings.Contains(strings.ToLower(item.Status), "block")
+	// Determine if blocked: either the status column contains "block" or
+	// the item has open dependency blockers from the enrichment pass.
+	isBlocked := strings.Contains(strings.ToLower(item.Status), "block") || item.IsBlocked()
 
 	var style func(strs ...string) string
 	switch {

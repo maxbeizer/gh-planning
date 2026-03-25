@@ -12,6 +12,15 @@ import (
 	"time"
 )
 
+// DependencyRef is a lightweight reference to an issue that participates in a
+// dependency relationship (tracked-by / tracking).
+type DependencyRef struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	State  string `json:"state"`
+}
+
 type ProjectItem struct {
 	ID          string            `json:"id"`
 	Title       string            `json:"title"`
@@ -26,6 +35,33 @@ type ProjectItem struct {
 	Status      string            `json:"status"`
 	ContentType string            `json:"contentType"`
 	Fields      map[string]string `json:"fields,omitempty"`
+	BlockedBy   []DependencyRef   `json:"blockedBy,omitempty"`
+	Blocks           []DependencyRef   `json:"blocks,omitempty"`
+	SubIssuesSummary SubIssueSummary   `json:"subIssuesSummary,omitempty"`
+	ParentIssue      *ParentRef        `json:"parentIssue,omitempty"`
+}
+
+// SubIssueSummary holds aggregate counts for an issue's sub-issues.
+type SubIssueSummary struct {
+	Total     int `json:"total"`
+	Completed int `json:"completed"`
+}
+
+// ParentRef is a lightweight reference to a parent issue.
+type ParentRef struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+}
+
+// IsBlocked returns true when any open issue in BlockedBy is still unresolved.
+func (p *ProjectItem) IsBlocked() bool {
+	for _, dep := range p.BlockedBy {
+		if strings.EqualFold(dep.State, "open") {
+			return true
+		}
+	}
+	return false
 }
 
 type Project struct {

@@ -64,6 +64,12 @@ func renderItemRow(ctx *context.ProgramContext, r rowEntry, active bool) string 
 
 	item := r.item
 
+	// Blocked indicator prefix for items with open dependency blockers.
+	blockedPrefix := ""
+	if item.IsBlocked() {
+		blockedPrefix = "🚫 "
+	}
+
 	// Build columns.
 	number := fmt.Sprintf("#%d", item.Number)
 	repo := shortRepo(item.Repository)
@@ -87,7 +93,18 @@ func renderItemRow(ctx *context.ProgramContext, r rowEntry, active bool) string 
 		titleW = 10
 	}
 
-	title := truncate(item.Title, titleW)
+	title := truncate(blockedPrefix+item.Title, titleW)
+
+	// Sub-issue progress indicator appended to title if present.
+	if item.SubIssuesSummary.Total > 0 {
+		prog := fmt.Sprintf(" [%d/%d]", item.SubIssuesSummary.Completed, item.SubIssuesSummary.Total)
+		progW := runewidth.StringWidth(prog)
+		if runewidth.StringWidth(title)+progW <= titleW {
+			title = title + prog
+		} else {
+			title = truncate(item.Title, titleW-progW) + prog
+		}
+	}
 
 	// Compose the row with styled segments.
 	var parts []string
@@ -104,9 +121,12 @@ func renderItemRow(ctx *context.ProgramContext, r rowEntry, active bool) string 
 	line := strings.Join(parts, "")
 
 	// Apply row style.
+	isBlocked := item.IsBlocked()
 	switch {
 	case active:
 		return th.RowActive.Width(width).Render(stripAnsi(line))
+	case isBlocked:
+		return th.Danger.Width(width).Render(stripAnsi(line))
 	case r.visibleIndex%2 == 0:
 		return th.RowAlt.Width(width).Render(stripAnsi(line))
 	default:
