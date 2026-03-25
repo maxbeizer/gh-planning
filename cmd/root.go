@@ -53,6 +53,7 @@ func init() {
 	rootCmd.AddCommand(cheatsheetCmd)
 	rootCmd.AddCommand(guideCmd)
 	rootCmd.AddCommand(tutorialCmd)
+	rootCmd.AddCommand(newTUICmd())
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
