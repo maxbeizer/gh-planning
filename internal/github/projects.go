@@ -34,6 +34,7 @@ type ProjectItem struct {
 	Repository  string            `json:"repository"`
 	Status      string            `json:"status"`
 	ContentType string            `json:"contentType"`
+	IssueType   string            `json:"issueType,omitempty"`
 	Fields      map[string]string `json:"fields,omitempty"`
 	BlockedBy   []DependencyRef   `json:"blockedBy,omitempty"`
 	Blocks           []DependencyRef   `json:"blocks,omitempty"`
@@ -92,6 +93,7 @@ const projectItemsQueryUser = `query($owner: String!, $number: Int!, $cursor: St
               assignees(first: 5) { nodes { login } }
               labels(first: 10) { nodes { name } }
               repository { nameWithOwner }
+              issueType { name }
             }
             ... on PullRequest {
               title
@@ -142,6 +144,7 @@ const projectItemsQueryOrg = `query($owner: String!, $number: Int!, $cursor: Str
               assignees(first: 5) { nodes { login } }
               labels(first: 10) { nodes { name } }
               repository { nameWithOwner }
+              issueType { name }
             }
             ... on PullRequest {
               title
@@ -199,6 +202,9 @@ type projectV2Items struct {
 				Repository struct {
 					NameWithOwner string `json:"nameWithOwner"`
 				} `json:"repository"`
+				IssueType struct {
+					Name string `json:"name"`
+				} `json:"issueType"`
 			} `json:"content"`
 			FieldValues struct {
 				Nodes []struct {
@@ -377,6 +383,7 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 				Repository:  node.Content.Repository.NameWithOwner,
 				Status:      status,
 				ContentType: node.Content.Typename,
+				IssueType:   node.Content.IssueType.Name,
 				Fields:      fields,
 			}
 			for _, assignee := range node.Content.Assignees.Nodes {

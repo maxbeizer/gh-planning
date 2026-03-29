@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/maxbeizer/gh-planning/internal/tui/board"
 	"github.com/maxbeizer/gh-planning/internal/tui/context"
 	"github.com/maxbeizer/gh-planning/internal/tui/theme"
 )
@@ -93,7 +94,15 @@ func renderItemRow(ctx *context.ProgramContext, r rowEntry, active bool) string 
 		titleW = 10
 	}
 
-	title := truncate(blockedPrefix+item.Title, titleW)
+	typePrefix := ""
+	badge := board.IssueTypeBadge(item.Fields["Issue Type"])
+	if badge == "" {
+		badge = board.IssueTypeBadge(item.IssueType)
+	}
+	if badge != "" {
+		typePrefix = badge + " "
+	}
+	title := truncate(blockedPrefix+typePrefix+item.Title, titleW)
 
 	// Sub-issue progress indicator appended to title if present.
 	if item.SubIssuesSummary.Total > 0 {

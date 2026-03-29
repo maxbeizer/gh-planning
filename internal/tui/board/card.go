@@ -44,7 +44,16 @@ func RenderCard(item github.ProjectItem, width int, isActive bool, th *theme.The
 		metaStyle = th.CardStaleMeta
 	}
 
-	line1 := numStyle.Render(number) + "  " + titleStyle.Render(title)
+	badge := IssueTypeBadge(item.Fields["Issue Type"])
+	if badge == "" {
+		badge = IssueTypeBadge(item.IssueType)
+	}
+	var line1 string
+	if badge != "" {
+		line1 = numStyle.Render(number) + " " + badge + " " + titleStyle.Render(title)
+	} else {
+		line1 = numStyle.Render(number) + "  " + titleStyle.Render(title)
+	}
 
 	// Line 2: meta — @assignee  repo  age
 	var metaParts []string
