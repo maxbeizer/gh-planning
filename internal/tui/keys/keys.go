@@ -59,9 +59,10 @@ func NewGlobalKeyMap() GlobalKeyMap {
 
 // ActionKeyMap holds item-level action keys.
 type ActionKeyMap struct {
-	Assign key.Binding
-	Label  key.Binding
-	Log    key.Binding
+	Assign       key.Binding
+	Label        key.Binding
+	Log          key.Binding
+	ChangeStatus key.Binding
 }
 
 // NewActionKeyMap returns the default action key bindings.
@@ -78,6 +79,10 @@ func NewActionKeyMap() ActionKeyMap {
 		Log: key.NewBinding(
 			key.WithKeys("l"),
 			key.WithHelp("l", "log progress"),
+		),
+		ChangeStatus: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "change status"),
 		),
 	}
 }
