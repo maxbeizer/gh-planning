@@ -393,6 +393,21 @@ var tools = []ToolDefinition{
 			})
 		},
 	},
+	{
+		Name:        "planning-tui",
+		Description: "Launch the interactive TUI planning dashboard. Requires an interactive terminal.",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project": intSchema("Project number"),
+			"owner":   stringSchema("Project owner"),
+		}),
+		Command: []string{"planning", "tui"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "tui"}, args, flagSpec{
+				"project": flagInt("--project"),
+				"owner":   flagString("--owner"),
+			})
+		},
+	},
 }
 
 func Tools() []ToolDefinition {
