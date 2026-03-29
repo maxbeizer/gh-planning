@@ -135,7 +135,7 @@ type Model struct {
 
 // New creates a root Model wired to the given ProgramContext.
 func New(ctx *tuictx.ProgramContext) Model {
-	return Model{
+	m := Model{
 		ctx:           ctx,
 		keys:          keys.NewGlobalKeyMap(),
 		actionKeys:    keys.NewActionKeyMap(),
@@ -152,6 +152,14 @@ func New(ctx *tuictx.ProgramContext) Model {
 		projectPicker: newProjectPicker(ctx),
 		prompt:        prompt.New(ctx),
 	}
+	if ctx.Config != nil && ctx.Config.TUI.AutoRefresh > 0 {
+		interval := ctx.Config.TUI.AutoRefresh
+		if interval < 30 {
+			interval = 30
+		}
+		m.autoRefreshInterval = time.Duration(interval) * time.Second
+	}
+	return m
 }
 
 // projectSwitchedMsg is emitted when the user selects a different project.
@@ -245,7 +253,20 @@ func parseProjectOptionID(id string) (string, int) {
 	return parts[0], n
 }
 
+// autoRefreshTickMsg signals that an auto-refresh interval has elapsed.
+type autoRefreshTickMsg struct{}
+
+func (m Model) scheduleAutoRefresh() tea.Cmd {
+	return tea.Tick(m.autoRefreshInterval, func(t time.Time) tea.Msg {
+		return autoRefreshTickMsg{}
+	})
+}
+
 func (m Model) Init() tea.Cmd {
 	m.loading = true
-	return fetchProjectData(m.ctx.Owner, m.ctx.ProjectNumber)
+	cmds := []tea.Cmd{fetchProjectData(m.ctx.Owner, m.ctx.ProjectNumber)}
+	if m.autoRefreshInterval > 0 {
+		cmds = append(cmds, m.scheduleAutoRefresh())
+	}
+	return tea.Batch(cmds...)
 }

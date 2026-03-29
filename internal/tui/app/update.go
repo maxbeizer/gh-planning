@@ -36,6 +36,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.footer.SetRefreshTime(time.Now())
 		}
 
+	case autoRefreshTickMsg:
+		var cmds []tea.Cmd
+		if !m.loading && m.autoRefreshInterval > 0 {
+			m.loading = true
+			cmds = append(cmds, fetchProjectDataFresh(m.ctx.Owner, m.ctx.ProjectNumber))
+		}
+		cmds = append(cmds, m.scheduleAutoRefresh())
+		return m, tea.Batch(cmds...)
+
+	case statusInfoMsg:
+		if msg.err != nil {
+			m.footer.SetStatus(fmt.Sprintf("Failed to load statuses: %v", msg.err))
+			break
+		}
+		m.statusProjectID = msg.projectID
+		m.statusFieldID = msg.statusFieldID
+		m.statusOptions = msg.statusOptions
+		m.pendingItem = msg.item
+
+		var opts []picker.Option
+		for name := range msg.statusOptions {
+			opts = append(opts, picker.Option{Name: name, ID: msg.statusOptions[name]})
+		}
+		m.picker.SetTitle("Change Status")
+		m.picker.SetOptions(opts)
+		m.picker.SetOnSelect(func(opt picker.Option) tea.Cmd {
+			m.mutating = true
+			return updateItemStatus(
+				m.ctx.Owner, m.ctx.ProjectNumber,
+				m.statusProjectID, m.pendingItem.ID,
+				m.statusFieldID, opt.ID, opt.Name,
+			)
+		})
+		m.picker.SetVisible(true)
+
+	case statusUpdatedMsg:
+		m.mutating = false
+		if msg.err != nil {
+			m.footer.SetStatus(fmt.Sprintf("Status change failed: %v", msg.err))
+		} else {
+			m.footer.SetStatus(fmt.Sprintf("✓ Status → %s", msg.newStatus))
+			m.loading = true
+			return m, fetchProjectDataFresh(m.ctx.Owner, m.ctx.ProjectNumber)
+		}
+
 	case copilot.DoneMsg:
 		// Copilot session ended — refresh data since the user may have made changes.
 		m.loading = true
@@ -173,6 +218,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return actions.LogProgress(message, item.Number)
 			})
 			return m, cmd
+		case key.Matches(msg, m.actionKeys.ChangeStatus):
+			item := m.activeItem()
+			if item == nil {
+				break
+			}
+			m.footer.SetStatus("Loading statuses...")
+			return m, fetchStatusInfo(m.ctx.Owner, m.ctx.ProjectNumber, *item)
 		case key.Matches(msg, m.keys.Refresh):
 			if !m.loading {
 				m.loading = true
