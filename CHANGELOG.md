@@ -2,6 +2,24 @@
 
 All notable changes to gh-planning are documented here.
 
+## [v0.4.0] — 2026-07-14
+
+### Added
+- **Field-aware project filters** — `status`, `board`, and `catch-up` now support repeatable `--field Field=Value` filters for custom GitHub Projects fields such as Manager, Owner, Workstream, Target Date, Trending, and Status. The special value `me` resolves to the current GitHub login.
+- **Profile default filters** — profiles can now store default field filters with `filters` or `filter.<field>`, so repeated commands automatically scope to a user’s operating view.
+- **Board hygiene reports** — new `gh planning hygiene` command identifies stale active work, unowned active items, missing planning fields, closed work still active on the board, Done items that remain open, blocked items without linked blockers, stale or unowned child issues, and merged PRs still active.
+- **Copilot skill and MCP coverage** for board hygiene and field filters, including the new `planning-hygiene` MCP tool.
+- **TUI dashboard expansion** — added the tab-based TUI dashboard, project switching, manual refresh, auto-refresh, issue type badges, dependency data, and a status change action picker.
+
+### Changed
+- **Faster project fetches** — project item pagination now uses one `gh api graphql --paginate --slurp` call instead of spawning a separate `gh` process for every page.
+- **Richer project field extraction** — project item loading now captures single-select, text, number, date, iteration, and user fields for filtering and JSON output.
+- **Project display and draft handling** — project display was improved and draft items are skipped.
+
+### Fixed
+- **MCP guide workflow docs** — removed stale guide workflow enums from the MCP tool and documentation.
+- **Documentation cleanup** — removed references to removed commands and documented previously missing commands.
+
 ## [v0.3.0] — 2026-03-23
 
 ### Added
