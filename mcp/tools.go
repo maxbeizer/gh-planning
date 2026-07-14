@@ -7,10 +7,10 @@ import (
 )
 
 type ToolDefinition struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	InputSchema map[string]interface{} `json:"inputSchema"`
-	Command     []string               `json:"-"`
+	Name        string                                         `json:"name"`
+	Description string                                         `json:"description"`
+	InputSchema map[string]interface{}                         `json:"inputSchema"`
+	Command     []string                                       `json:"-"`
 	Build       func(map[string]interface{}) ([]string, error) `json:"-"`
 }
 
@@ -23,6 +23,7 @@ var tools = []ToolDefinition{
 			"owner":     stringSchema("Project owner"),
 			"stale":     stringSchema("Stale duration (e.g. 7d)"),
 			"assignee":  stringSchema("Assignee filter"),
+			"field":     arraySchema("Project field filters as Field=Value", "string"),
 			"board":     boolSchema("Show kanban board view"),
 			"swimlanes": boolSchema("Show assignee swimlanes"),
 			"exclude":   arraySchema("Statuses to exclude", "string"),
@@ -34,6 +35,7 @@ var tools = []ToolDefinition{
 				"owner":     flagString("--owner"),
 				"stale":     flagString("--stale"),
 				"assignee":  flagString("--assignee"),
+				"field":     flagRepeat("--field"),
 				"board":     flagBool("--board"),
 				"swimlanes": flagBool("--swimlanes"),
 				"exclude":   flagRepeat("--exclude"),
@@ -66,6 +68,7 @@ var tools = []ToolDefinition{
 			"project": intSchema("Project number"),
 			"owner":   stringSchema("Project owner"),
 			"since":   stringSchema("Duration or date"),
+			"field":   arraySchema("Project field filters as Field=Value", "string"),
 		}),
 		Command: []string{"planning", "catch-up"},
 		Build: func(args map[string]interface{}) ([]string, error) {
@@ -73,6 +76,32 @@ var tools = []ToolDefinition{
 				"project": flagInt("--project"),
 				"owner":   flagString("--owner"),
 				"since":   flagString("--since"),
+				"field":   flagRepeat("--field"),
+			})
+		},
+	},
+	{
+		Name:        "planning-hygiene",
+		Description: "Report actionable project board hygiene issues",
+		InputSchema: objectSchema(map[string]interface{}{
+			"project":        intSchema("Project number"),
+			"owner":          stringSchema("Project owner"),
+			"stale":          stringSchema("Stale duration (e.g. 7d)"),
+			"field":          arraySchema("Project field filters as Field=Value", "string"),
+			"format":         stringSchema("Output format: text or markdown"),
+			"required_field": arraySchema("Required planning fields", "string"),
+			"owner_field":    arraySchema("Ownership fields", "string"),
+		}),
+		Command: []string{"planning", "hygiene"},
+		Build: func(args map[string]interface{}) ([]string, error) {
+			return buildFlags([]string{"planning", "hygiene"}, args, flagSpec{
+				"project":        flagInt("--project"),
+				"owner":          flagString("--owner"),
+				"stale":          flagString("--stale"),
+				"field":          flagRepeat("--field"),
+				"format":         flagString("--format"),
+				"required_field": flagRepeat("--required-field"),
+				"owner_field":    flagRepeat("--owner-field"),
 			})
 		},
 	},
@@ -240,6 +269,7 @@ var tools = []ToolDefinition{
 		InputSchema: objectSchema(map[string]interface{}{
 			"project":      intSchema("Project number"),
 			"owner":        stringSchema("Project owner"),
+			"field":        arraySchema("Project field filters as Field=Value", "string"),
 			"swimlanes":    boolSchema("Show assignee swimlanes"),
 			"include_done": boolSchema("Include completed items"),
 		}),
@@ -248,6 +278,7 @@ var tools = []ToolDefinition{
 			return buildFlags([]string{"planning", "board"}, args, flagSpec{
 				"project":      flagInt("--project"),
 				"owner":        flagString("--owner"),
+				"field":        flagRepeat("--field"),
 				"swimlanes":    flagBool("--swimlanes"),
 				"include_done": flagBool("--include-done"),
 			})

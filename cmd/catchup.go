@@ -31,6 +31,7 @@ var catchupOpts struct {
 	Since   string
 	Project int
 	Owner   string
+	Fields  []string
 }
 
 var catchupCmd = &cobra.Command{
@@ -43,6 +44,7 @@ func init() {
 	catchupCmd.Flags().StringVar(&catchupOpts.Since, "since", "", "Look back to a duration or date")
 	catchupCmd.Flags().IntVar(&catchupOpts.Project, "project", 0, "Project number")
 	catchupCmd.Flags().StringVar(&catchupOpts.Owner, "owner", "", "Project owner")
+	catchupCmd.Flags().StringArrayVar(&catchupOpts.Fields, "field", nil, "Filter by project field value (repeatable, e.g. --field Manager=me)")
 }
 
 func runCatchup(cmd *cobra.Command, args []string) error {
@@ -103,6 +105,14 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 		return pr.err
 	}
 	projectData := pr.data
+	fieldFilters, err := resolveFieldFiltersWithUser(pc.Cfg.Filters, catchupOpts.Fields, currentUser)
+	if err != nil {
+		return err
+	}
+	fieldScoped := len(fieldFilters) > 0
+	if fieldScoped {
+		projectData = projectWithItems(filterProjectItems(projectData, "", 0, nil, fieldFilters))
+	}
 
 	repos := uniqueRepos(projectData)
 	repoQuery := buildRepoQuery(repos)
@@ -163,11 +173,11 @@ func runCatchup(cmd *cobra.Command, args []string) error {
 	}
 
 	sections := []catchupSection{
-		{Title: "📥 New", Items: formatCatchupItemsWithAuthor(newResult.items)},
-		{Title: "✅ Merged", Items: formatCatchupItems(mergedResult.items)},
-		{Title: "✅ Closed", Items: formatCatchupItems(closedResult.items)},
-		{Title: "💬 Activity on your items", Items: filterCommentActivity(assignedResult.items)},
-		{Title: "👀 Needs your review", Items: formatCatchupItems(reviewResult.items)},
+		{Title: "📥 New", Items: formatCatchupItemsWithAuthor(filterSearchIssuesByProject(newResult.items, projectData, fieldScoped))},
+		{Title: "✅ Merged", Items: formatCatchupItems(filterSearchIssuesByProject(mergedResult.items, projectData, fieldScoped))},
+		{Title: "✅ Closed", Items: formatCatchupItems(filterSearchIssuesByProject(closedResult.items, projectData, fieldScoped))},
+		{Title: "💬 Activity on your items", Items: filterCommentActivity(filterSearchIssuesByProject(assignedResult.items, projectData, fieldScoped))},
+		{Title: "👀 Needs your review", Items: formatCatchupItems(filterSearchIssuesByProject(reviewResult.items, projectData, fieldScoped))},
 	}
 
 	if err := state.UpdateLastSeen(time.Now().UTC()); err != nil {
@@ -228,13 +238,13 @@ func parseDayOfWeek(value string) (time.Time, bool) {
 		return time.Time{}, false
 	}
 	weekdays := map[string]time.Weekday{
-		"sunday": time.Sunday,
-		"monday": time.Monday,
-		"tuesday": time.Tuesday,
+		"sunday":    time.Sunday,
+		"monday":    time.Monday,
+		"tuesday":   time.Tuesday,
 		"wednesday": time.Wednesday,
-		"thursday": time.Thursday,
-		"friday": time.Friday,
-		"saturday": time.Saturday,
+		"thursday":  time.Thursday,
+		"friday":    time.Friday,
+		"saturday":  time.Saturday,
 	}
 	weekday, ok := weekdays[value]
 	if !ok {
@@ -267,6 +277,32 @@ func uniqueRepos(project *github.Project) []string {
 	}
 	sort.Strings(repos)
 	return repos
+}
+
+func filterSearchIssuesByProject(items []github.SearchIssue, project *github.Project, enabled bool) []github.SearchIssue {
+	if !enabled {
+		return items
+	}
+	allowed := map[string]struct{}{}
+	for _, projectItems := range project.Items {
+		for _, item := range projectItems {
+			if item.Repository == "" || item.Number == 0 {
+				continue
+			}
+			allowed[fmt.Sprintf("%s#%d", strings.ToLower(item.Repository), item.Number)] = struct{}{}
+		}
+	}
+	filtered := make([]github.SearchIssue, 0, len(items))
+	for _, item := range items {
+		repo := github.RepositoryNameFromURL(item.RepositoryURL)
+		if repo == "" {
+			continue
+		}
+		if _, ok := allowed[fmt.Sprintf("%s#%d", strings.ToLower(repo), item.Number)]; ok {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
 }
 
 func buildRepoQuery(repos []string) string {

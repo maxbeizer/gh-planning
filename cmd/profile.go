@@ -183,14 +183,50 @@ func runProfileSet(cmd *cobra.Command, args []string) error {
 		} else {
 			cfg.Orgs = splitAndTrim(value)
 		}
+	case "filters":
+		cfg.Filters = parseProfileFilters(value)
 	default:
-		return fmt.Errorf("unknown key: %s\nSupported: default-project, default-owner, team, 1-1-repo-pattern, agent.max-per-hour, repos, orgs", key)
+		if strings.HasPrefix(key, "filter.") {
+			field := strings.TrimPrefix(key, "filter.")
+			if strings.TrimSpace(field) == "" {
+				return fmt.Errorf("filter field name is required")
+			}
+			if cfg.Filters == nil {
+				cfg.Filters = map[string]string{}
+			}
+			if value == "" {
+				delete(cfg.Filters, field)
+			} else {
+				cfg.Filters[field] = value
+			}
+			break
+		}
+		return fmt.Errorf("unknown key: %s\nSupported: default-project, default-owner, team, 1-1-repo-pattern, agent.max-per-hour, repos, orgs, filters, filter.<field>", key)
 	}
 	if err := config.Save(cfg); err != nil {
 		return err
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "Updated %s\n", key)
 	return nil
+}
+
+func parseProfileFilters(value string) map[string]string {
+	filters := map[string]string{}
+	for _, part := range splitAndTrim(value) {
+		pieces := strings.SplitN(part, "=", 2)
+		if len(pieces) != 2 {
+			continue
+		}
+		name := strings.TrimSpace(pieces[0])
+		filterValue := strings.TrimSpace(pieces[1])
+		if name != "" && filterValue != "" {
+			filters[name] = filterValue
+		}
+	}
+	if len(filters) == 0 {
+		return nil
+	}
+	return filters
 }
 
 func runProfileShow(cmd *cobra.Command, args []string) error {
@@ -683,5 +719,3 @@ func (m profileSelectModel) View() string {
 	b.WriteString(tui.HelpBar.Render("  ↑↓ navigate • enter select • esc cancel"))
 	return b.String()
 }
-
-

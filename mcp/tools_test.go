@@ -48,6 +48,7 @@ func TestToolNames(t *testing.T) {
 		"planning-cheatsheet",
 		"planning-focus",
 		"planning-guide",
+		"planning-hygiene",
 		"planning-log",
 		"planning-logs",
 		"planning-profile-create",

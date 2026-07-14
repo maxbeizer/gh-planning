@@ -11,4 +11,5 @@ Summarize what happened while you were away.
 ```bash
 gh planning catch-up --json
 gh planning catch-up --since {timeframe} --json
+gh planning catch-up --field Manager=me --since {timeframe} --json
 ```

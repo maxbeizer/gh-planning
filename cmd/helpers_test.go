@@ -255,17 +255,17 @@ func TestFilterProjectItems(t *testing.T) {
 	project := &github.Project{
 		Items: map[string][]github.ProjectItem{
 			"In Progress": {
-				{Number: 1, Title: "Task 1", Assignees: []string{"alice"}, UpdatedAt: now},
-				{Number: 2, Title: "Task 2", Assignees: []string{"bob"}, UpdatedAt: now.Add(-48 * time.Hour)},
+				{Number: 1, Title: "Task 1", Assignees: []string{"alice"}, UpdatedAt: now, Fields: map[string]string{"Manager": "alice", "Workstream": "Quality"}},
+				{Number: 2, Title: "Task 2", Assignees: []string{"bob"}, UpdatedAt: now.Add(-48 * time.Hour), Fields: map[string]string{"Manager": "bob"}},
 			},
 			"Done": {
-				{Number: 3, Title: "Task 3", Assignees: []string{"alice"}, UpdatedAt: now},
+				{Number: 3, Title: "Task 3", Assignees: []string{"alice"}, UpdatedAt: now, Fields: map[string]string{"Manager": "alice"}},
 			},
 		},
 	}
 
 	t.Run("no filters", func(t *testing.T) {
-		result := filterProjectItems(project, "", 0, nil)
+		result := filterProjectItems(project, "", 0, nil, nil)
 		total := 0
 		for _, items := range result {
 			total += len(items)
@@ -276,7 +276,7 @@ func TestFilterProjectItems(t *testing.T) {
 	})
 
 	t.Run("filter by assignee", func(t *testing.T) {
-		result := filterProjectItems(project, "alice", 0, nil)
+		result := filterProjectItems(project, "alice", 0, nil, nil)
 		total := 0
 		for _, items := range result {
 			total += len(items)
@@ -287,7 +287,7 @@ func TestFilterProjectItems(t *testing.T) {
 	})
 
 	t.Run("exclude status", func(t *testing.T) {
-		result := filterProjectItems(project, "", 0, []string{"Done"})
+		result := filterProjectItems(project, "", 0, []string{"Done"}, nil)
 		if _, ok := result["Done"]; ok {
 			t.Error("expected Done to be excluded")
 		}
@@ -297,7 +297,7 @@ func TestFilterProjectItems(t *testing.T) {
 	})
 
 	t.Run("stale filter", func(t *testing.T) {
-		result := filterProjectItems(project, "", 24*time.Hour, nil)
+		result := filterProjectItems(project, "", 24*time.Hour, nil, nil)
 		total := 0
 		for _, items := range result {
 			total += len(items)
@@ -306,6 +306,58 @@ func TestFilterProjectItems(t *testing.T) {
 			t.Errorf("expected 1 stale item, got %d", total)
 		}
 	})
+
+	t.Run("filter by field", func(t *testing.T) {
+		result := filterProjectItems(project, "", 0, nil, []fieldFilter{{Name: "Manager", Value: "alice"}})
+		total := 0
+		for _, items := range result {
+			total += len(items)
+		}
+		if total != 2 {
+			t.Errorf("expected 2 items for Manager=alice, got %d", total)
+		}
+	})
+
+	t.Run("field filters are additive", func(t *testing.T) {
+		result := filterProjectItems(project, "", 0, nil, []fieldFilter{
+			{Name: "Manager", Value: "alice"},
+			{Name: "Workstream", Value: "Quality"},
+		})
+		if len(result["In Progress"]) != 1 {
+			t.Errorf("expected 1 matching item, got %d", len(result["In Progress"]))
+		}
+	})
+}
+
+func TestParseFieldFilters(t *testing.T) {
+	defaults := map[string]string{"Manager": "me"}
+	got, needsUser, err := parseFieldFilters(defaults, []string{"Workstream=Quality"})
+	if err != nil {
+		t.Fatalf("parseFieldFilters error: %v", err)
+	}
+	if !needsUser {
+		t.Fatal("expected needsUser for Manager=me")
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 filters, got %d", len(got))
+	}
+}
+
+func TestSubstituteMe(t *testing.T) {
+	got := substituteMe([]fieldFilter{{Name: "Manager", Value: "me"}}, "alice")
+	if got[0].Value != "alice" {
+		t.Errorf("expected me to become alice, got %q", got[0].Value)
+	}
+}
+
+func TestParseProfileFilters(t *testing.T) {
+	got := parseProfileFilters("Manager=me, Workstream=Quality")
+	if got["Manager"] != "me" {
+		t.Errorf("Manager filter = %q, want me", got["Manager"])
+	}
+	if got["Workstream"] != "Quality" {
+		t.Errorf("Workstream filter = %q, want Quality", got["Workstream"])
+	}
 }
 
 func TestDecorateStatus(t *testing.T) {
@@ -385,7 +437,8 @@ func TestFilterNonGlobRepos(t *testing.T) {
 	}
 }
 
-func TestFindStatusOption(t *testing.T) {	options := map[string]string{
+func TestFindStatusOption(t *testing.T) {
+	options := map[string]string{
 		"In Progress": "opt-1",
 		"Done":        "opt-2",
 		"Backlog":     "opt-3",

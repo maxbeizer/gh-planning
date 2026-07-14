@@ -35,6 +35,7 @@ func init() {
 	rootCmd.AddCommand(profileCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(boardCmd)
+	rootCmd.AddCommand(hygieneCmd)
 	rootCmd.AddCommand(trackCmd)
 	rootCmd.AddCommand(focusCmd)
 	rootCmd.AddCommand(unfocusCmd)

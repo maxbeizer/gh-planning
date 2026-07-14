@@ -19,6 +19,7 @@ var statusOpts struct {
 	Project   int
 	Owner     string
 	Assignee  string
+	Fields    []string
 	Stale     string
 	Exclude   []string
 	Board     bool
@@ -36,6 +37,7 @@ func init() {
 	statusCmd.Flags().IntVar(&statusOpts.Project, "project", 0, "Project number")
 	statusCmd.Flags().StringVar(&statusOpts.Owner, "owner", "", "Project owner")
 	statusCmd.Flags().StringVar(&statusOpts.Assignee, "assignee", "", "Filter by assignee")
+	statusCmd.Flags().StringArrayVar(&statusOpts.Fields, "field", nil, "Filter by project field value (repeatable, e.g. --field Manager=me)")
 	statusCmd.Flags().StringVar(&statusOpts.Stale, "stale", "", "Only show items stale for this duration")
 	statusCmd.Flags().StringSliceVar(&statusOpts.Exclude, "exclude", nil, "Exclude statuses (e.g. --exclude Done,Closed)")
 	statusCmd.Flags().BoolVar(&statusOpts.Board, "board", false, "Show kanban board view")
@@ -63,7 +65,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	filtered := filterProjectItems(projectData, statusOpts.Assignee, staleDuration, statusOpts.Exclude)
+	fieldFilters, err := resolveFieldFilters(cmd.Context(), pc.Cfg.Filters, statusOpts.Fields)
+	if err != nil {
+		return err
+	}
+	filtered := filterProjectItems(projectData, statusOpts.Assignee, staleDuration, statusOpts.Exclude, fieldFilters)
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
@@ -90,7 +96,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func filterProjectItems(project *github.Project, assignee string, stale time.Duration, exclude []string) map[string][]github.ProjectItem {
+func filterProjectItems(project *github.Project, assignee string, stale time.Duration, exclude []string, fieldFilters []fieldFilter) map[string][]github.ProjectItem {
 	excludeSet := map[string]bool{}
 	for _, e := range exclude {
 		excludeSet[strings.ToLower(strings.TrimSpace(e))] = true
@@ -117,6 +123,9 @@ func filterProjectItems(project *github.Project, assignee string, stale time.Dur
 				}
 			}
 			if stale > 0 && time.Since(item.UpdatedAt) < stale {
+				continue
+			}
+			if !matchesFieldFilters(item, fieldFilters) {
 				continue
 			}
 			filtered[status] = append(filtered[status], item)

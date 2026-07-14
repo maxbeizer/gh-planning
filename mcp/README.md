@@ -49,6 +49,7 @@ The server listens on stdin and writes JSON-RPC responses to stdout.
 ### Query & Views
 - `planning.status` — Project status and filters
 - `planning.board` — Kanban board view
+- `planning.hygiene` — Board hygiene report
 - `planning.sprint` — Sprint overview
 - `planning.roadmap` — Project roadmap and timeline
 - `planning.blocked` — Blocked items and dependencies

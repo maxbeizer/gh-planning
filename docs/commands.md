@@ -94,11 +94,14 @@ Set a configuration value in the active profile.
 | `agent.max-per-hour` | Agent rate limit | `10` |
 | `repos` | Comma-separated repos (supports globs) | `github/github,github/gh-*` |
 | `orgs` | Comma-separated GitHub orgs for auto-detection | `github` |
+| `filters` | Comma-separated default project field filters | `Manager=me,Workstream=Quality` |
+| `filter.<field>` | Set or clear one default project field filter | `me` |
 
 ```bash
 gh planning profile set team maxbeizer,claudia-bot
 gh planning profile set repos github/github,github/gh-*
 gh planning profile set orgs github
+gh planning profile set filter.Manager me
 ```
 
 ### `gh planning profile show`
@@ -172,16 +175,35 @@ Display project items grouped by status. The default view for seeing everything 
 ```bash
 gh planning status --project 25 --owner maxbeizer
 gh planning status --assignee maxbeizer --stale 7d   # highlight stale items
+gh planning status --field Manager=me                # filter by project field
 gh planning status --board                            # kanban-style output
 gh planning status --swimlanes                        # grouped by assignee
 gh planning status --exclude Done,Closed              # hide specific statuses
 gh planning status --open                             # shorthand: exclude Done/Closed
 ```
 
+The `--field Field=Value` flag is repeatable and combines filters with AND logic.
+The special value `me` resolves to the current GitHub login, so `--field
+Manager=me` works for user-backed fields as well as text or single-select fields.
+
 ### `gh planning board`
 
 Kanban board view of your project. Excludes Done/Completed/Closed columns by default so you see only active work.
 
+gh planning board --field Workstream=Quality
+```
+
+### `gh planning hygiene`
+
+Report actionable board maintenance issues, including stale active items,
+unowned active items, missing planning fields, closed work still active on the
+board, Done items that remain open, blocked items without linked blockers,
+active parents with stale or unowned children, and merged PRs still active.
+
+```bash
+gh planning hygiene --project 25 --owner maxbeizer
+gh planning hygiene --field Manager=me --stale 7d --format markdown
+gh planning hygiene --required-field Target Date --required-field Workstream
 ```bash
 gh planning board
 gh planning board --swimlanes      # group rows by assignee

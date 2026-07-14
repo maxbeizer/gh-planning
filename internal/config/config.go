@@ -10,15 +10,16 @@ import (
 )
 
 type Config struct {
-	DefaultProject      int            `yaml:"default-project" json:"defaultProject"`
-	DefaultOwner        string         `yaml:"default-owner" json:"defaultOwner"`
-	Team                []string       `yaml:"team,omitempty" json:"team,omitempty"`
-	OneOnOneRepoPattern string         `yaml:"1-1-repo-pattern,omitempty" json:"oneOnOneRepoPattern,omitempty"`
-	AgentMaxPerHour     int            `yaml:"agent.max-per-hour,omitempty" json:"agentMaxPerHour,omitempty"`
-	Repos               []string       `yaml:"repos,omitempty" json:"repos,omitempty"`
-	Orgs                []string       `yaml:"orgs,omitempty" json:"orgs,omitempty"`
-	TUI                 TUIConfig      `yaml:"tui,omitempty" json:"tui,omitempty"`
-	Projects            []ProjectEntry `yaml:"projects,omitempty" json:"projects,omitempty"`
+	DefaultProject      int               `yaml:"default-project" json:"defaultProject"`
+	DefaultOwner        string            `yaml:"default-owner" json:"defaultOwner"`
+	Team                []string          `yaml:"team,omitempty" json:"team,omitempty"`
+	OneOnOneRepoPattern string            `yaml:"1-1-repo-pattern,omitempty" json:"oneOnOneRepoPattern,omitempty"`
+	AgentMaxPerHour     int               `yaml:"agent.max-per-hour,omitempty" json:"agentMaxPerHour,omitempty"`
+	Repos               []string          `yaml:"repos,omitempty" json:"repos,omitempty"`
+	Orgs                []string          `yaml:"orgs,omitempty" json:"orgs,omitempty"`
+	Filters             map[string]string `yaml:"filters,omitempty" json:"filters,omitempty"`
+	TUI                 TUIConfig         `yaml:"tui,omitempty" json:"tui,omitempty"`
+	Projects            []ProjectEntry    `yaml:"projects,omitempty" json:"projects,omitempty"`
 }
 
 // TUIConfig holds per-profile TUI customization.

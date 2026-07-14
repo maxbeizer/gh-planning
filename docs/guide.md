@@ -180,6 +180,7 @@ gh planning init --project 25 --owner maxbeizer
 | `profile detect` | Show which profile matches the current repo |
 | `status` | Project board summary (list, `--board`, or `--swimlanes`) |
 | `board` | Kanban board view (excludes Done by default) |
+| `hygiene` | Board maintenance report for stale, unowned, missing-field, or mismatched-state items |
 | `track` | Create an issue and add it to the project |
 | `focus` / `unfocus` | Set or clear your current working issue |
 | `log` | Log progress, decisions, blockers during work |

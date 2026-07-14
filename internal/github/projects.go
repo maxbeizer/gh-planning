@@ -22,21 +22,21 @@ type DependencyRef struct {
 }
 
 type ProjectItem struct {
-	ID          string            `json:"id"`
-	Title       string            `json:"title"`
-	Number      int               `json:"number"`
-	URL         string            `json:"url"`
-	State       string            `json:"state"`
-	CreatedAt   time.Time         `json:"createdAt"`
-	UpdatedAt   time.Time         `json:"updatedAt"`
-	Assignees   []string          `json:"assignees"`
-	Labels      []string          `json:"labels"`
-	Repository  string            `json:"repository"`
-	Status      string            `json:"status"`
-	ContentType string            `json:"contentType"`
-	IssueType   string            `json:"issueType,omitempty"`
-	Fields      map[string]string `json:"fields,omitempty"`
-	BlockedBy   []DependencyRef   `json:"blockedBy,omitempty"`
+	ID               string            `json:"id"`
+	Title            string            `json:"title"`
+	Number           int               `json:"number"`
+	URL              string            `json:"url"`
+	State            string            `json:"state"`
+	CreatedAt        time.Time         `json:"createdAt"`
+	UpdatedAt        time.Time         `json:"updatedAt"`
+	Assignees        []string          `json:"assignees"`
+	Labels           []string          `json:"labels"`
+	Repository       string            `json:"repository"`
+	Status           string            `json:"status"`
+	ContentType      string            `json:"contentType"`
+	IssueType        string            `json:"issueType,omitempty"`
+	Fields           map[string]string `json:"fields,omitempty"`
+	BlockedBy        []DependencyRef   `json:"blockedBy,omitempty"`
 	Blocks           []DependencyRef   `json:"blocks,omitempty"`
 	SubIssuesSummary SubIssueSummary   `json:"subIssuesSummary,omitempty"`
 	ParentIssue      *ParentRef        `json:"parentIssue,omitempty"`
@@ -66,15 +66,15 @@ func (p *ProjectItem) IsBlocked() bool {
 }
 
 type Project struct {
-	Title string                 `json:"title"`
+	Title string                   `json:"title"`
 	Items map[string][]ProjectItem `json:"items"`
 }
 
-const projectItemsQueryUser = `query($owner: String!, $number: Int!, $cursor: String) {
+const projectItemsQueryUser = `query($owner: String!, $number: Int!, $endCursor: String) {
   user(login: $owner) {
     projectV2(number: $number) {
       title
-      items(first: 100, after: $cursor) {
+      items(first: 100, after: $endCursor) {
         pageInfo {
           hasNextPage
           endCursor
@@ -107,11 +107,31 @@ const projectItemsQueryUser = `query($owner: String!, $number: Int!, $cursor: St
               repository { nameWithOwner }
             }
           }
-          fieldValues(first: 20) {
+          fieldValues(first: 50) {
             nodes {
               ... on ProjectV2ItemFieldSingleSelectValue {
                 name
-                field { ... on ProjectV2SingleSelectField { name } }
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldTextValue {
+                text
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldNumberValue {
+                number
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldDateValue {
+                date
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldIterationValue {
+                title
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldUserValue {
+                users(first: 10) { nodes { login } }
+                field { ... on ProjectV2FieldCommon { name } }
               }
             }
           }
@@ -121,11 +141,11 @@ const projectItemsQueryUser = `query($owner: String!, $number: Int!, $cursor: St
   }
 }`
 
-const projectItemsQueryOrg = `query($owner: String!, $number: Int!, $cursor: String) {
+const projectItemsQueryOrg = `query($owner: String!, $number: Int!, $endCursor: String) {
   organization(login: $owner) {
     projectV2(number: $number) {
       title
-      items(first: 100, after: $cursor) {
+      items(first: 100, after: $endCursor) {
         pageInfo {
           hasNextPage
           endCursor
@@ -158,11 +178,31 @@ const projectItemsQueryOrg = `query($owner: String!, $number: Int!, $cursor: Str
               repository { nameWithOwner }
             }
           }
-          fieldValues(first: 20) {
+          fieldValues(first: 50) {
             nodes {
               ... on ProjectV2ItemFieldSingleSelectValue {
                 name
-                field { ... on ProjectV2SingleSelectField { name } }
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldTextValue {
+                text
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldNumberValue {
+                number
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldDateValue {
+                date
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldIterationValue {
+                title
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldUserValue {
+                users(first: 10) { nodes { login } }
+                field { ... on ProjectV2FieldCommon { name } }
               }
             }
           }
@@ -182,11 +222,11 @@ type projectV2Items struct {
 		Nodes []struct {
 			ID      string `json:"id"`
 			Content *struct {
-				Typename string    `json:"__typename"`
-				Title    string    `json:"title"`
-				Number   int       `json:"number"`
-				URL      string    `json:"url"`
-				State    string    `json:"state"`
+				Typename  string    `json:"__typename"`
+				Title     string    `json:"title"`
+				Number    int       `json:"number"`
+				URL       string    `json:"url"`
+				State     string    `json:"state"`
 				CreatedAt time.Time `json:"createdAt"`
 				UpdatedAt time.Time `json:"updatedAt"`
 				Assignees struct {
@@ -208,7 +248,16 @@ type projectV2Items struct {
 			} `json:"content"`
 			FieldValues struct {
 				Nodes []struct {
-					Name  string `json:"name"`
+					Name   string   `json:"name"`
+					Text   string   `json:"text"`
+					Number *float64 `json:"number"`
+					Date   string   `json:"date"`
+					Title  string   `json:"title"`
+					Users  struct {
+						Nodes []struct {
+							Login string `json:"login"`
+						} `json:"nodes"`
+					} `json:"users"`
 					Field struct {
 						Name string `json:"name"`
 					} `json:"field"`
@@ -311,49 +360,36 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 
 	fmt.Fprintf(os.Stderr, "Fetching project data...")
 
-	project := &Project{Items: map[string][]ProjectItem{}}
-	var cursor string
-	page := 0
-	// Try user query first; if the project isn't found, retry with org query.
-	query := projectItemsQueryUser
-	useOrg := false
-
-	for {
-		page++
-		if page > 1 {
-			fmt.Fprintf(os.Stderr, ".")
-		}
-		vars := map[string]interface{}{"owner": owner, "number": number}
-		if cursor != "" {
-			vars["cursor"] = cursor
-		}
-		payload, err := GraphQL(ctx, query, vars)
+	project, err := fetchProjectPages(ctx, owner, number, projectItemsQueryUser)
+	if err != nil || project == nil || project.Title == "" {
+		project, err = fetchProjectPages(ctx, owner, number, projectItemsQueryOrg)
 		if err != nil {
-			if !useOrg {
-				// User query failed, try org query from scratch
-				useOrg = true
-				query = projectItemsQueryOrg
-				cursor = ""
-				page = 0
-				continue
-			}
 			return nil, err
 		}
-		var resp projectItemsResponse
-		if err := json.Unmarshal(payload, &resp); err != nil {
-			return nil, err
-		}
+	}
+	if project == nil || project.Title == "" {
+		return nil, errors.New("project not found")
+	}
+
+	fmt.Fprintf(os.Stderr, " done (%d items, cached for %s)\n", totalItems(project), projectCacheTTL)
+	saveProjectCache(owner, number, project)
+	return project, nil
+}
+
+func fetchProjectPages(ctx context.Context, owner string, number int, query string) (*Project, error) {
+	payload, err := GraphQLPaginate(ctx, query, map[string]interface{}{"owner": owner, "number": number})
+	if err != nil {
+		return nil, err
+	}
+	var pages []projectItemsResponse
+	if err := json.Unmarshal(payload, &pages); err != nil {
+		return nil, err
+	}
+	project := &Project{Items: map[string][]ProjectItem{}}
+	for _, resp := range pages {
 		pv2 := resp.projectV2()
 		if pv2 == nil {
-			if !useOrg {
-				// User query returned nil project, try org query
-				useOrg = true
-				query = projectItemsQueryOrg
-				cursor = ""
-				page = 0
-				continue
-			}
-			return nil, errors.New("project not found")
+			continue
 		}
 		if project.Title == "" {
 			project.Title = pv2.Title
@@ -365,11 +401,12 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 			status := "No Status"
 			fields := map[string]string{}
 			for _, field := range node.FieldValues.Nodes {
-				if field.Field.Name != "" && field.Name != "" {
-					fields[field.Field.Name] = field.Name
+				value := projectFieldValue(field.Name, field.Text, field.Number, field.Date, field.Title, field.Users.Nodes)
+				if field.Field.Name != "" && value != "" {
+					fields[field.Field.Name] = value
 				}
-				if strings.EqualFold(field.Field.Name, "Status") && field.Name != "" {
-					status = field.Name
+				if strings.EqualFold(field.Field.Name, "Status") && value != "" {
+					status = value
 				}
 			}
 			item := ProjectItem{
@@ -395,16 +432,37 @@ func GetProject(ctx context.Context, owner string, number int) (*Project, error)
 			project.Items[status] = append(project.Items[status], item)
 		}
 
-		if !pv2.Items.PageInfo.HasNextPage {
-			break
-		}
-		cursor = pv2.Items.PageInfo.EndCursor
 	}
-
-	fmt.Fprintf(os.Stderr, " done (%d items, cached for %s)\n", totalItems(project), projectCacheTTL)
-	saveProjectCache(owner, number, project)
 	return project, nil
 }
+
+func projectFieldValue(name, text string, number *float64, date, title string, users []struct {
+	Login string `json:"login"`
+}) string {
+	switch {
+	case name != "":
+		return name
+	case text != "":
+		return text
+	case number != nil:
+		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.6f", *number), "0"), ".")
+	case date != "":
+		return date
+	case title != "":
+		return title
+	case len(users) > 0:
+		logins := make([]string, 0, len(users))
+		for _, user := range users {
+			if user.Login != "" {
+				logins = append(logins, user.Login)
+			}
+		}
+		return strings.Join(logins, ",")
+	default:
+		return ""
+	}
+}
+
 const projectInfoQueryUser = `query($owner: String!, $number: Int!) {
   user(login: $owner) {
     projectV2(number: $number) {

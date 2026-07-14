@@ -37,6 +37,21 @@ func GraphQL(ctx context.Context, query string, variables map[string]interface{}
 	return runGH(ctx, args...)
 }
 
+func GraphQLPaginate(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+	args := []string{"api", "graphql", "--paginate", "--slurp", "-f", fmt.Sprintf("query=%s", query)}
+	for key, val := range variables {
+		switch v := val.(type) {
+		case int:
+			args = append(args, "-F", fmt.Sprintf("%s=%d", key, v))
+		case string:
+			args = append(args, "-f", fmt.Sprintf("%s=%s", key, v))
+		default:
+			args = append(args, "-f", fmt.Sprintf("%s=%v", key, v))
+		}
+	}
+	return runGH(ctx, args...)
+}
+
 func API(ctx context.Context, method string, path string, fields map[string]string) ([]byte, error) {
 	args := []string{"api"}
 	if method != "" {

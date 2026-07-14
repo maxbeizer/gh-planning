@@ -12,6 +12,7 @@ var boardOpts struct {
 	Project     int
 	Owner       string
 	Assignee    string
+	Fields      []string
 	Stale       string
 	Exclude     []string
 	Swimlanes   bool
@@ -32,6 +33,7 @@ func init() {
 	boardCmd.Flags().IntVar(&boardOpts.Project, "project", 0, "Project number")
 	boardCmd.Flags().StringVar(&boardOpts.Owner, "owner", "", "Project owner")
 	boardCmd.Flags().StringVar(&boardOpts.Assignee, "assignee", "", "Filter by assignee")
+	boardCmd.Flags().StringArrayVar(&boardOpts.Fields, "field", nil, "Filter by project field value (repeatable, e.g. --field Manager=me)")
 	boardCmd.Flags().StringVar(&boardOpts.Stale, "stale", "", "Only show items stale for this duration")
 	boardCmd.Flags().StringSliceVar(&boardOpts.Exclude, "exclude", nil, "Exclude statuses (e.g. --exclude Done,Closed)")
 	boardCmd.Flags().BoolVar(&boardOpts.Swimlanes, "swimlanes", false, "Add assignee swimlanes to board view")
@@ -65,7 +67,11 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		exclude = defaultDoneStatuses
 	}
 
-	filtered := filterProjectItems(projectData, boardOpts.Assignee, staleDuration, exclude)
+	fieldFilters, err := resolveFieldFilters(cmd.Context(), pc.Cfg.Filters, boardOpts.Fields)
+	if err != nil {
+		return err
+	}
+	filtered := filterProjectItems(projectData, boardOpts.Assignee, staleDuration, exclude, fieldFilters)
 
 	if OutputOptions().JSON || OutputOptions().JQ != "" {
 		payload := map[string]interface{}{
